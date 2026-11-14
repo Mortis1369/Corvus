@@ -4,9 +4,20 @@ version.workspace = true
 edition.workspace = true
 license.workspace = true
 authors.workspace = true
+description = "Corvus tool launcher"
+build = "build.rs"
+
+[[bin]]
+name = "Corvus"
+path = "src/main.rs"
 
 [dependencies]
 corvus-common = { path = "../corvus-common" }
 eframe.workspace = true
 egui.workspace = true
 log.workspace = true
+windows-sys.workspace = true
+image.workspace = true
+
+[build-dependencies]
+winresource.workspace = true

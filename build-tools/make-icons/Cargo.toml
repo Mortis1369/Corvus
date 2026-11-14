@@ -1,0 +1,12 @@
+[package]
+name = "make-icons"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+description = "branding/karasu.svg (or .png) -> branding/generated/karasu.ico + PNG set"
+
+[dependencies]
+image.workspace = true
+ico.workspace = true
+resvg.workspace = true
