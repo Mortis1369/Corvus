@@ -256,6 +256,8 @@ impl CorvusApp {
             None => log::warn!("could not read the work area; leaving window where the OS put it"),
         }
         ctx.send_viewport_cmd(ViewportCommand::Visible(true));
+        // A window shown after starting hidden does not take the foreground by itself.
+        ctx.send_viewport_cmd(ViewportCommand::Focus);
     }
 
     fn poll_hashes(&mut self) {

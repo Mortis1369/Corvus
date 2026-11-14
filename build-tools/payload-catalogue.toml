@@ -70,6 +70,7 @@ exe = "prime95.exe"
 id = "occt"
 name = "OCCT"
 category = "Diagnostics"
+version = "17.1.11"
 license = "Free for personal use only (OCCT Personal)"
 source = "https://www.ocbase.com/download"
 url = "https://www.ocbase.com/download/edition:Personal"
@@ -99,7 +100,7 @@ license = "Freeware"
 source = "https://geeks3d.com/furmark/downloads/"
 url = "https://geeks3d.com/dl/get/842"
 file = "FurMark_2.11.0.4_win64.zip"
-exe = "FurMark.exe"
+exe = "FurMark_GUI.exe"
 
 [[tool]]
 id = "crystaldiskinfo"
@@ -179,6 +180,8 @@ url = "https://download.sysinternals.com/files/SysinternalsSuite.zip"
 dest = "Tools/System/Sysinternals"
 exe = "procexp64.exe"
 notes = "Part of the Sysinternals Suite."
+# ZoomIt and RDCMan are 330 MB between them and not bench tools.
+delete = ["ZoomIt.exe", "ZoomIt64.exe", "RDCMan.exe", "RDCMan-x86.exe"]
 
 [[tool]]
 id = "autoruns"
@@ -232,6 +235,8 @@ source = "https://github.com/Klocman/Bulk-Crap-Uninstaller/releases"
 url = "https://github.com/Klocman/Bulk-Crap-Uninstaller/releases/download/v6.3/BCUninstaller_6.3.0_portable.7z"
 exe = "BCUninstaller.exe"
 mode = "live"
+# The portable 7z ships an ARM64 runtime next to the x64 one; 213 MB we will never boot.
+delete = ["win-arm64"]
 
 [[tool]]
 id = "ddu"
@@ -284,6 +289,7 @@ version = "11.3.3.735"
 license = "Freeware"
 source = "https://www.wisecleaner.com/wise-registry-cleaner.html"
 url = "https://downloads.wisecleaner.com/soft/WRCFree_11.3.3.735.zip"
+subdir = "WRCFree_11.3.3.735(x64)"
 exe = "WiseRegCleaner.exe"
 mode = "live"
 
@@ -320,7 +326,7 @@ category = "Malware"
 license = "Free for private use; commercial use needs a licence"
 source = "https://www.emsisoft.com/en/emergency-kit/"
 url = "https://dl.emsisoft.com/EmsisoftEmergencyKit.exe"
-exe = "Start Emergency Kit Scanner.exe"
+exe = "Start Scanner.exe"
 mode = "live"
 elevate = true
 
@@ -401,9 +407,10 @@ category = "Disk"
 version = "1.26.31"
 license = "Apache-2.0 / TrueCrypt License 3.0"
 source = "https://veracrypt.fr/en/Downloads.html"
-url = "https://github.com/veracrypt/VeraCrypt/releases/download/VeraCrypt_1.26.31/VeraCrypt.Portable.1.26.31.exe"
+kind = "manual"
 exe = "VeraCrypt-x64.exe"
 elevate = true
+notes = "VeraCrypt's portable package is a GUI extractor, not an archive. Download VeraCrypt.Portable.1.26.31.exe from https://github.com/veracrypt/VeraCrypt/releases, run it, point the extraction at build-tools/downloads/manual/veracrypt/."
 
 [[tool]]
 id = "7zip"
@@ -598,7 +605,7 @@ menu = "MemTest86 (UEFI)"
 [[boot]]
 name = "mt86plus_9.00_x86_64.iso"
 url = "https://memtest.org/download/v9.00/mt86plus_9.00_x86_64.iso.zip"
-pick = "mt86plus_9.00_x86_64.iso"
+pick = "memtest.iso"
 version = "9.00"
 source = "https://memtest.org/"
 menu = "Memtest86+ (Legacy + UEFI)"

@@ -3,6 +3,33 @@
 All dates are the day the work was done. "VERIFY" notes record where the brief was checked against
 real docs/source and what was found.
 
+## 2026-11-14 — Milestone 4: payload staging
+
+- `build-tools/payload-catalogue.toml` is the single source of truth: 47 tool entries and 8 boot
+  images, every one with its vendor page and a direct URL on the vendor's own host or GitHub
+  releases (SourceForge only where the vendor hosts there: CrystalDiskInfo/Mark, GParted, WinSCP).
+- `build-tools/stage-payload` downloads (via `curl.exe`), extracts (via 7-Zip; the freshly staged
+  26.06 is preferred over the old bootstrap copy because newer archives use methods 21.06 lacks),
+  trims (`delete`), hashes the launcher exe, auto-reads the version from the exe when the catalogue
+  leaves it blank, and writes `payload/Launcher/tools.toml`, `credits/LICENSES.md` plus any licence
+  files found in each tool, and `payload/STAGING-REPORT.md`. `--reuse` keeps staged folders so the
+  catalogue can be regenerated without re-copying 25 GB. `--only a,b` stages a subset.
+- Result: **44 launcher entries staged and verified** (the launcher loads them with 0 missing),
+  7 boot images, 31 GB total of which 25.9 GB is SDI Origin's 2026 driver-pack set.
+- **Needs a human click (4 tools + 1 image):** DDU (Cloudflare), FreeFileSync (portable mode is an
+  installer option), VeraCrypt (GUI extractor), HxD (site refuses scripts), Macrium rescue ISO.
+  Instructions in `docs/payload-manual-items.md`. Until then their tiles are greyed "missing".
+- Trimmed on purpose: Sysinternals ZoomIt/RDCMan (330 MB), BCU's ARM64 runtime (213 MB),
+  Notepad++ updater, 7-Zip's uninstaller, SDIO's 2021 duplicate driver packs.
+- **VERIFY (Ventoy):** latest is 1.1.18 (2026-10-09); `ventoy-1.1.18-windows.zip` downloaded and its
+  SHA-256 matches the release's `sha256.txt`. `VTOYCLI` syntax, `ventoy.json` keys (menu_alias,
+  menu_class, control, theme) and boot-image support recorded in `docs/ventoy-notes.md`. There is
+  **no label option** in the CLI, so CorvusSetup will set `CORVUS` afterwards.
+- Placeholder Ventoy theme: `branding/ventoy-theme/theme.txt` plus a generated
+  `branding/generated/ventoy-background.png` (dark, faint kanji) — swap the PNG for real art.
+- Launcher: after showing the initially hidden window, send `ViewportCommand::Focus` so it lands in
+  front of whatever the technician had open.
+
 ## 2026-11-14 — Launcher shape change (Aiden's alteration)
 
 - `Corvus.exe` is now a fixed **9:16 portrait** panel pinned to the **top-right** of the primary

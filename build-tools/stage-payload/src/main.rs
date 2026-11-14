@@ -160,6 +160,8 @@ struct Opts {
     tools: bool,
     boot: bool,
     download: bool,
+    /// Keep tool folders that are already staged (exe present) instead of re-extracting.
+    reuse: bool,
 }
 
 fn parse_args() -> Opts {
@@ -169,6 +171,7 @@ fn parse_args() -> Opts {
         tools: true,
         boot: true,
         download: true,
+        reuse: false,
     };
     let mut it = std::env::args().skip(1);
     while let Some(a) = it.next() {
@@ -180,6 +183,7 @@ fn parse_args() -> Opts {
             "--tools-only" => o.boot = false,
             "--boot-only" => o.tools = false,
             "--no-download" => o.download = false,
+            "--reuse" => o.reuse = true,
             "--catalogue" => o.catalogue = PathBuf::from(it.next().unwrap_or_default()),
             other => {
                 eprintln!("unknown argument {other}");
@@ -204,6 +208,7 @@ struct Ctx {
     payload: PathBuf,
     sevenzip: PathBuf,
     download: bool,
+    reuse: bool,
     report: Vec<String>,
 }
 
@@ -231,15 +236,27 @@ fn main() {
         sevenzip: PathBuf::from(&cat.settings.sevenzip),
         root,
         download: opts.download,
+        reuse: opts.reuse,
         report: Vec::new(),
     };
     fs::create_dir_all(&ctx.downloads).ok();
     fs::create_dir_all(ctx.payload.join("Launcher").join("credits")).ok();
     fs::create_dir_all(ctx.payload.join("Boot")).ok();
+    // Prefer the freshly staged 7-Zip (newest compression methods) over the bootstrap copy.
+    let staged_7z = ctx
+        .payload
+        .join("Tools")
+        .join("Disk")
+        .join("7-Zip")
+        .join("7z.exe");
+    if staged_7z.is_file() {
+        ctx.sevenzip = staged_7z;
+    }
     if !ctx.sevenzip.is_file() {
         eprintln!("7z.exe not found at {}", ctx.sevenzip.display());
         std::process::exit(1);
     }
+    println!("extractor: {}", ctx.sevenzip.display());
 
     let wanted = |id: &str| opts.only.as_ref().is_none_or(|s| s.contains(id));
 
@@ -375,6 +392,24 @@ fn stage_tool(
         ctx.payload.join(e.dest.replace('/', "\\"))
     };
 
+    // --reuse: an already-staged folder with the exe in place is taken as-is.
+    if ctx.reuse && !e.exe.is_empty() {
+        let exe = dest.join(e.exe.replace('/', "\\"));
+        if exe.is_file() {
+            let entry = tool_out(ctx, e, &dest, &exe)?;
+            println!(
+                "  reused   {} ({})",
+                dest.strip_prefix(&ctx.payload).unwrap_or(&dest).display(),
+                entry.version
+            );
+            ctx.report.push(format!(
+                "| {} | ok (reused) | {} · {} |",
+                e.name, entry.version, entry.path
+            ));
+            return Ok(Some((dest, entry)));
+        }
+    }
+
     // 1. obtain
     let staging = ctx.root.join("target").join("stage-tmp").join(&e.id);
     let _ = fs::remove_dir_all(&staging);
@@ -428,14 +463,19 @@ fn stage_tool(
     }
 
     // 2. shape: subdir, auto-strip, deletes, extras
-    let mut content = staging.clone();
+    // Strip a lone wrapper folder first, then descend into the requested subdir, then strip again.
+    let mut content = auto_strip(staging.clone());
     if !e.subdir.is_empty() {
         content = content.join(e.subdir.replace('/', "\\"));
         if !content.is_dir() {
-            return Err(format!("subdir '{}' not found in archive", e.subdir));
+            return Err(format!(
+                "subdir '{}' not found in archive; top level has: {}",
+                e.subdir,
+                list_top(content.parent().unwrap_or(&staging))
+            ));
         }
+        content = auto_strip(content);
     }
-    content = auto_strip(content);
     for d in &e.delete {
         let p = content.join(d.replace('/', "\\"));
         if p.is_dir() {

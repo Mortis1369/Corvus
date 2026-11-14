@@ -1,0 +1,66 @@
+# Corvus Ventoy theme — plain dark placeholder.
+# GRUB2 theme format (Ventoy's menu is GRUB2). Swap background.png for the real artwork;
+# nothing else needs to change. Installed by CorvusSetup to /ventoy/theme/corvus/.
+
+title-text: ""
+desktop-image: "background.png"
+desktop-color: "#0a0a0a"
+terminal-font: "Unicode Regular 16"
+terminal-left: "0"
+terminal-top: "0"
+terminal-width: "100%"
+terminal-height: "100%"
+terminal-border: "0"
+
++ boot_menu {
+    left = 10%
+    top = 18%
+    width = 80%
+    height = 62%
+    item_font = "Unicode Regular 16"
+    item_color = "#808080"
+    selected_item_color = "#e6e6e6"
+    item_height = 32
+    item_padding = 4
+    item_spacing = 6
+    icon_width = 0
+    icon_height = 0
+    item_icon_space = 0
+    scrollbar = true
+    scrollbar_width = 6
+}
+
++ label {
+    left = 10%
+    top = 10%
+    width = 80%
+    align = "left"
+    font = "Unicode Regular 20"
+    color = "#e6e6e6"
+    text = "CORVUS"
+}
+
++ label {
+    left = 10%
+    top = 84%
+    width = 80%
+    align = "left"
+    font = "Unicode Regular 14"
+    color = "#606060"
+    text = "Enter boots · F3 tree view · F5 tools · F7 text mode"
+}
+
++ progress_bar {
+    id = "__timeout__"
+    left = 10%
+    top = 90%
+    width = 80%
+    height = 16
+    show_text = true
+    font = "Unicode Regular 14"
+    text_color = "#808080"
+    fg_color = "#808080"
+    bg_color = "#1a1a1a"
+    border_color = "#303030"
+    text = "@TIMEOUT_NOTIFICATION_LONG@"
+}

@@ -80,7 +80,29 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
     let ico_path = out.join("karasu.ico");
     dir.write(std::fs::File::create(&ico_path)?)?;
     println!("wrote {}", ico_path.display());
+
+    // Ventoy menu background: the window colour with a dim glyph on the right. Placeholder
+    // until real artwork exists; CorvusSetup copies it as /ventoy/theme/corvus/background.png.
+    let bg_path = out.join("ventoy-background.png");
+    ventoy_background(&square, 1920, 1080).save(&bg_path)?;
+    println!("wrote {}", bg_path.display());
     Ok(())
+}
+
+fn ventoy_background(glyph: &RgbaImage, w: u32, h: u32) -> RgbaImage {
+    let bg = Rgba([10u8, 10, 10, 255]);
+    let mut img = RgbaImage::from_pixel(w, h, bg);
+    let side = (h as f32 * 0.7) as u32;
+    let g = resize(glyph, side);
+    let ox = w - side - w / 16;
+    let oy = (h - side) / 2;
+    for (x, y, p) in g.enumerate_pixels() {
+        // Keep it faint (max ~12% brightness) so menu text stays readable over it.
+        let a = p[3] as f32 / 255.0 * 0.12;
+        let v = (10.0 + (230.0 - 10.0) * a).round() as u8;
+        img.put_pixel(ox + x, oy + y, Rgba([v, v, v, 255]));
+    }
+    img
 }
 
 fn workspace_root() -> PathBuf {
