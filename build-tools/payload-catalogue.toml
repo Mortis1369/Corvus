@@ -1,0 +1,633 @@
+# Corvus payload catalogue — the single source of truth for what goes on the drive.
+# Read by build-tools/stage-payload. Every url is the vendor's own site or GitHub releases;
+# no mirrors, no repacks. Versions verified 2026-11-14.
+#
+# Fields: see build-tools/stage-payload/src/main.rs (Entry). kind defaults to "archive".
+
+[settings]
+downloads = "build-tools/downloads"
+payload   = "payload"
+# Bootstrap extractor (the old MediCat copy; only used at build time, never shipped).
+sevenzip  = "S:/Corvus/PortableApps/7-ZipPortable/App/7-Zip64/7z.exe"
+
+# =================================================================== Diagnostics
+
+[[tool]]
+id = "hwinfo"
+name = "HWiNFO"
+category = "Diagnostics"
+version = "8.60"
+license = "Freeware"
+source = "https://www.hwinfo.com/download/"
+url = "https://www.hwinfo.com/files/hwi_860.zip"
+exe = "HWiNFO64.exe"
+
+[[tool]]
+id = "cpuz"
+name = "CPU-Z"
+category = "Diagnostics"
+version = "3.02"
+license = "Freeware"
+source = "https://www.cpuid.com/softwares/cpu-z.html"
+url = "https://download.cpuid.com/cpu-z/cpu-z_3.02-en.zip"
+exe = "cpuz_x64.exe"
+
+[[tool]]
+id = "gpuz"
+name = "GPU-Z"
+category = "Diagnostics"
+version = "2.71.0"
+license = "Freeware"
+source = "https://www.techpowerup.com/download/techpowerup-gpu-z/"
+url = "https://www.techpowerup.com/download/techpowerup-gpu-z/"
+post = "id=3257&server_id=19"
+file = "GPU-Z.2.71.0.exe"
+kind = "exe"
+exe = "GPU-Z.exe"
+
+[[tool]]
+id = "aida64"
+name = "AIDA64 Extreme"
+category = "Diagnostics"
+version = "8.40"
+license = "Commercial — 30-day trial (no licence owned)"
+source = "https://www.aida64.com/downloads"
+url = "https://download.aida64.com/aida64extreme840.zip"
+exe = "aida64.exe"
+notes = "Trial edition. HWiNFO covers most of the same ground."
+
+[[tool]]
+id = "prime95"
+name = "Prime95"
+category = "Diagnostics"
+version = "30.19 b20"
+license = "Freeware (GIMPS)"
+source = "https://www.mersenne.org/download/"
+url = "https://www.mersenne.org/download/software/v30/30.19/p95v3019b20.win64.zip"
+exe = "prime95.exe"
+
+[[tool]]
+id = "occt"
+name = "OCCT"
+category = "Diagnostics"
+license = "Free for personal use only (OCCT Personal)"
+source = "https://www.ocbase.com/download"
+url = "https://www.ocbase.com/download/edition:Personal"
+file = "OCCT.exe"
+kind = "exe"
+exe = "OCCT.exe"
+notes = "Personal edition. Commercial use needs an OCCT Pro licence."
+
+[[tool]]
+id = "testmem5"
+name = "TestMem5"
+category = "Diagnostics"
+version = "0.13.1"
+license = "Freeware (Serj; CoolCmd redistribution)"
+source = "https://github.com/CoolCmd/TestMem5/releases"
+url = "https://github.com/CoolCmd/TestMem5/releases/download/v0.13.1/TestMem5.7z"
+exe = "TM5.exe"
+elevate = true
+notes = "Load the anta777 config from the bin folder before running."
+
+[[tool]]
+id = "furmark2"
+name = "FurMark 2"
+category = "Diagnostics"
+version = "2.11.0.4"
+license = "Freeware"
+source = "https://geeks3d.com/furmark/downloads/"
+url = "https://geeks3d.com/dl/get/842"
+file = "FurMark_2.11.0.4_win64.zip"
+exe = "FurMark.exe"
+
+[[tool]]
+id = "crystaldiskinfo"
+name = "CrystalDiskInfo"
+category = "Diagnostics"
+version = "9.9.4"
+license = "MIT"
+source = "https://crystalmark.info/en/software/crystaldiskinfo/"
+url = "https://downloads.sourceforge.net/project/crystaldiskinfo/9.9.4/CrystalDiskInfo9_9_4.zip"
+ua = "curl"
+exe = "DiskInfo64.exe"
+
+[[tool]]
+id = "crystaldiskmark"
+name = "CrystalDiskMark"
+category = "Diagnostics"
+version = "9.0.3"
+license = "MIT"
+source = "https://crystalmark.info/en/software/crystaldiskmark/"
+url = "https://downloads.sourceforge.net/project/crystaldiskmark/9.0.3/CrystalDiskMark9_0_3.zip"
+ua = "curl"
+exe = "DiskMark64.exe"
+
+[[tool]]
+id = "victoria"
+name = "Victoria"
+category = "Diagnostics"
+version = "5.37"
+license = "Freeware"
+source = "https://hdd.by/victoria/"
+url = "https://hdd.by/Victoria/Victoria537.zip"
+exe = "Victoria.exe"
+elevate = true
+
+[[tool]]
+id = "bluescreenview"
+name = "BlueScreenView"
+category = "Diagnostics"
+version = "1.55"
+license = "Freeware (NirSoft)"
+source = "https://www.nirsoft.net/utils/blue_screen_view.html"
+url = "https://www.nirsoft.net/utils/bluescreenview-x64.zip"
+exe = "BlueScreenView.exe"
+
+[[tool]]
+id = "fancontrol"
+name = "Fan Control"
+category = "Diagnostics"
+version = "V285"
+license = "Freeware (source-available, Rem0o)"
+source = "https://github.com/Rem0o/FanControl.Releases/releases"
+url = "https://github.com/Rem0o/FanControl.Releases/releases/download/V285/FanControl_285_net_4_8.zip"
+exe = "FanControl.exe"
+mode = "live"
+notes = ".NET Framework 4.8 build, so no extra runtime is needed on Windows 10/11."
+
+[[tool]]
+id = "deadpixeltester"
+name = "Dead Pixel Tester"
+category = "Diagnostics"
+license = "Freeware"
+source = "https://dps.uk.com/software/dpt"
+url = "https://dps.uk.com/dps_download/6190/?key=4arw34qlurl3rmhuv85g47mt242uyl"
+file = "DPT.exe"
+kind = "exe"
+exe = "DPT.exe"
+
+# =================================================================== System
+
+[[tool]]
+id = "procexp"
+name = "Process Explorer"
+category = "System"
+license = "Sysinternals Software License"
+source = "https://learn.microsoft.com/sysinternals/downloads/sysinternals-suite"
+url = "https://download.sysinternals.com/files/SysinternalsSuite.zip"
+dest = "Tools/System/Sysinternals"
+exe = "procexp64.exe"
+notes = "Part of the Sysinternals Suite."
+
+[[tool]]
+id = "autoruns"
+name = "Autoruns"
+category = "System"
+license = "Sysinternals Software License"
+source = "https://learn.microsoft.com/sysinternals/downloads/autoruns"
+kind = "alias"
+of = "procexp"
+exe = "Autoruns64.exe"
+elevate = true
+
+[[tool]]
+id = "procmon"
+name = "Process Monitor"
+category = "System"
+license = "Sysinternals Software License"
+source = "https://learn.microsoft.com/sysinternals/downloads/procmon"
+kind = "alias"
+of = "procexp"
+exe = "Procmon64.exe"
+elevate = true
+
+[[tool]]
+id = "rammap"
+name = "RAMMap"
+category = "System"
+license = "Sysinternals Software License"
+source = "https://learn.microsoft.com/sysinternals/downloads/rammap"
+kind = "alias"
+of = "procexp"
+exe = "RAMMap64.exe"
+
+[[tool]]
+id = "vmmap"
+name = "VMMap"
+category = "System"
+license = "Sysinternals Software License"
+source = "https://learn.microsoft.com/sysinternals/downloads/vmmap"
+kind = "alias"
+of = "procexp"
+exe = "vmmap64.exe"
+
+[[tool]]
+id = "bcuninstaller"
+name = "Bulk Crap Uninstaller"
+category = "System"
+version = "6.3.0"
+license = "Apache-2.0"
+source = "https://github.com/Klocman/Bulk-Crap-Uninstaller/releases"
+url = "https://github.com/Klocman/Bulk-Crap-Uninstaller/releases/download/v6.3/BCUninstaller_6.3.0_portable.7z"
+exe = "BCUninstaller.exe"
+mode = "live"
+
+[[tool]]
+id = "ddu"
+name = "Display Driver Uninstaller"
+category = "System"
+version = "18.1.6.1"
+license = "Freeware"
+source = "https://www.wagnardsoft.com/display-driver-uninstaller-ddu"
+kind = "manual"
+exe = "Display Driver Uninstaller.exe"
+mode = "live"
+elevate = true
+notes = "Wagnardsoft's download sits behind a Cloudflare check: download 'DDU v18.1.6.1.exe' in a browser, run it once (it is a self-extractor), and put the extracted folder's contents in build-tools/downloads/manual/ddu/."
+
+[[tool]]
+id = "wiztree"
+name = "WizTree"
+category = "System"
+version = "4.33"
+license = "Free for home use; business use needs a licence"
+source = "https://diskanalyzer.com/download"
+url = "https://diskanalyzer.com/files/wiztree_4_33_portable.zip"
+exe = "WizTree64.exe"
+
+[[tool]]
+id = "everything"
+name = "Everything"
+category = "System"
+version = "1.4.1.1032"
+license = "MIT"
+source = "https://www.voidtools.com/downloads/"
+url = "https://www.voidtools.com/Everything-1.4.1.1032.x64.zip"
+exe = "Everything.exe"
+
+[[tool]]
+id = "wisediskcleaner"
+name = "Wise Disk Cleaner"
+category = "System"
+version = "12.0.1.963"
+license = "Freeware"
+source = "https://www.wisecleaner.com/wise-disk-cleaner.html"
+url = "https://downloads.wisecleaner.com/soft/WDCFree_12.0.1.963.zip"
+exe = "WiseDiskCleaner.exe"
+
+[[tool]]
+id = "wiseregistrycleaner"
+name = "Wise Registry Cleaner"
+category = "System"
+version = "11.3.3.735"
+license = "Freeware"
+source = "https://www.wisecleaner.com/wise-registry-cleaner.html"
+url = "https://downloads.wisecleaner.com/soft/WRCFree_11.3.3.735.zip"
+exe = "WiseRegCleaner.exe"
+mode = "live"
+
+[[tool]]
+id = "errorlookup"
+name = "Error Lookup"
+category = "System"
+version = "2.6.1"
+license = "GPL-3.0"
+source = "https://github.com/henrypp/errorlookup/releases"
+url = "https://github.com/henrypp/errorlookup/releases/download/v.2.6.1/errorlookup-2.6.1-bin.7z"
+subdir = "64"
+exe = "errorlookup.exe"
+
+# =================================================================== Malware
+
+[[tool]]
+id = "adwcleaner"
+name = "AdwCleaner"
+category = "Malware"
+license = "Freeware (Malwarebytes)"
+source = "https://www.malwarebytes.com/adwcleaner"
+url = "https://adwcleaner.malwarebytes.com/adwcleaner?channel=release"
+file = "adwcleaner.exe"
+kind = "exe"
+exe = "adwcleaner.exe"
+mode = "live"
+elevate = true
+
+[[tool]]
+id = "eek"
+name = "Emsisoft Emergency Kit"
+category = "Malware"
+license = "Free for private use; commercial use needs a licence"
+source = "https://www.emsisoft.com/en/emergency-kit/"
+url = "https://dl.emsisoft.com/EmsisoftEmergencyKit.exe"
+exe = "Start Emergency Kit Scanner.exe"
+mode = "live"
+elevate = true
+
+# =================================================================== Drivers
+
+[[tool]]
+id = "sdio"
+name = "Snappy Driver Installer Origin"
+category = "Drivers"
+version = "2.0.7.890"
+license = "GPL-3.0"
+source = "https://www.glenn.delahoy.com/snappy-driver-installer-origin/"
+url = "https://www.glenn.delahoy.com/downloads/sdio/SDIO_2.0.7.890.zip"
+exe = "SDIO_x64_R890.exe"
+mode = "live"
+elevate = true
+notes = "Driver packs are the 2026 set carried over from the MediCat drive (the 2021 duplicates were dropped)."
+extra = [ { local = "S:/Corvus/PortableApps/SnappyDriverInstaller/drivers", to = "drivers" } ]
+delete = [
+  "drivers/DP_CardReader_21113.7z", "drivers/DP_Chipset_21113.7z", "drivers/DP_LAN_Intel_21104.7z",
+  "drivers/DP_LAN_Others_21113.7z", "drivers/DP_LAN_Realtek-NT_21104.7z", "drivers/DP_MassStorage_21113.7z",
+  "drivers/DP_Misc_21104.7z", "drivers/DP_Monitor_21113.7z", "drivers/DP_Touchpad_Synaptics_21112.7z",
+  "drivers/DP_Vendor_21112.7z", "drivers/DP_WLAN-WiFi_21112.7z", "drivers/DP_zUSB3_21090.7z",
+]
+
+# =================================================================== Disk
+
+[[tool]]
+id = "diskgenius"
+name = "DiskGenius Free"
+category = "Disk"
+version = "6.2.0.1829"
+license = "Freeware (Free edition)"
+source = "https://www.diskgenius.com/download.php"
+url = "https://www.diskgenius.com/dyna_download/?software=DGEng6201829_x64.zip"
+file = "DGEng6201829_x64.zip"
+exe = "DiskGenius.exe"
+elevate = true
+
+[[tool]]
+id = "testdisk"
+name = "TestDisk"
+category = "Disk"
+version = "7.2"
+license = "GPL-2.0"
+source = "https://www.cgsecurity.org/wiki/TestDisk_Download"
+url = "https://www.cgsecurity.org/testdisk-7.2.win64.zip"
+exe = "testdisk_win.exe"
+elevate = true
+
+[[tool]]
+id = "photorec"
+name = "PhotoRec"
+category = "Disk"
+version = "7.2"
+license = "GPL-2.0"
+source = "https://www.cgsecurity.org/wiki/PhotoRec"
+kind = "alias"
+of = "testdisk"
+exe = "qphotorec_win.exe"
+elevate = true
+
+[[tool]]
+id = "freefilesync"
+name = "FreeFileSync"
+category = "Disk"
+version = "14.13"
+license = "GPL-3.0"
+source = "https://freefilesync.org/download.php"
+kind = "manual"
+exe = "FreeFileSync.exe"
+notes = "Run FreeFileSync_14.13_Windows_Setup.exe once, choose the *Portable* installation type, target build-tools/downloads/manual/freefilesync/. Never the Local install (that is the path with bundled offers)."
+
+[[tool]]
+id = "veracrypt"
+name = "VeraCrypt"
+category = "Disk"
+version = "1.26.31"
+license = "Apache-2.0 / TrueCrypt License 3.0"
+source = "https://veracrypt.fr/en/Downloads.html"
+url = "https://github.com/veracrypt/VeraCrypt/releases/download/VeraCrypt_1.26.31/VeraCrypt.Portable.1.26.31.exe"
+exe = "VeraCrypt-x64.exe"
+elevate = true
+
+[[tool]]
+id = "7zip"
+name = "7-Zip"
+category = "Disk"
+version = "26.06"
+license = "LGPL-2.1 + unRAR restriction"
+source = "https://www.7-zip.org/download.html"
+url = "https://www.7-zip.org/a/7z2606-x64.exe"
+exe = "7zFM.exe"
+delete = ["Uninstall.exe"]
+notes = "The official installer is a 7z self-extractor; it was unpacked, not installed."
+
+# =================================================================== Browser
+
+[[tool]]
+id = "chromium"
+name = "Ungoogled Chromium"
+category = "Browser"
+version = "157.0.8103.50-1.1"
+license = "BSD-3-Clause"
+source = "https://github.com/ungoogled-software/ungoogled-chromium-windows/releases"
+url = "https://github.com/ungoogled-software/ungoogled-chromium-windows/releases/download/157.0.8103.50-1.1/ungoogled-chromium_157.0.8103.50-1.1_windows_x64.zip"
+exe = "chrome.exe"
+args = "--user-data-dir=Profile --no-first-run"
+notes = "Profile lives in the tool folder on the stick."
+
+# =================================================================== Deployment
+
+[[tool]]
+id = "crowbar"
+name = "Crowbar"
+category = "Deployment"
+version = "0.1.0"
+license = "MIT"
+source = "Aiden"
+kind = "local"
+local = "S:/Corvus/Crowbar.exe"
+exe = "Crowbar.exe"
+mode = "live"
+notes = "Aiden's provisioning tool (WinUtil replacement)."
+
+[[tool]]
+id = "mct11"
+name = "Media Creation Tool (Win 11)"
+category = "Deployment"
+license = "Microsoft Software License Terms"
+source = "https://www.microsoft.com/software-download/windows11"
+url = "https://go.microsoft.com/fwlink/?linkid=2156295"
+file = "MediaCreationTool_W11.exe"
+kind = "exe"
+exe = "MediaCreationTool_W11.exe"
+mode = "live"
+elevate = true
+
+[[tool]]
+id = "mct10"
+name = "Media Creation Tool (Win 10)"
+category = "Deployment"
+license = "Microsoft Software License Terms"
+source = "https://www.microsoft.com/software-download/windows10"
+url = "https://go.microsoft.com/fwlink/?LinkId=691209"
+file = "MediaCreationTool_W10.exe"
+kind = "exe"
+exe = "MediaCreationTool_W10.exe"
+mode = "live"
+elevate = true
+
+[[tool]]
+id = "rufus"
+name = "Rufus"
+category = "Deployment"
+version = "4.15"
+license = "GPL-3.0"
+source = "https://github.com/pbatard/rufus/releases"
+url = "https://github.com/pbatard/rufus/releases/download/v4.15/rufus-4.15p.exe"
+kind = "exe"
+exe = "rufus-4.15p.exe"
+mode = "live"
+elevate = true
+
+# =================================================================== Utilities
+
+[[tool]]
+id = "notepadpp"
+name = "Notepad++"
+category = "Utilities"
+version = "8.9.9.1"
+license = "GPL-3.0"
+source = "https://github.com/notepad-plus-plus/notepad-plus-plus/releases"
+url = "https://github.com/notepad-plus-plus/notepad-plus-plus/releases/download/v8.9.9.1/npp.8.9.9.1.portable.x64.zip"
+exe = "notepad++.exe"
+delete = ["updater"]
+
+[[tool]]
+id = "explorerpp"
+name = "Explorer++"
+category = "Utilities"
+version = "1.4.0"
+license = "GPL-3.0"
+source = "https://github.com/derceg/explorerplusplus/releases"
+url = "https://github.com/derceg/explorerplusplus/releases/download/version-1.4.0/explorerpp_x64.zip"
+exe = "Explorer++.exe"
+
+[[tool]]
+id = "qdir"
+name = "Q-Dir"
+category = "Utilities"
+version = "12.84"
+license = "Freeware"
+source = "https://www.softwareok.com/?Download=Q-Dir"
+url = "https://www.softwareok.com/Download/Q-Dir_Portable_x64.zip"
+exe = "Q-Dir_x64.exe"
+
+[[tool]]
+id = "sumatrapdf"
+name = "SumatraPDF"
+category = "Utilities"
+version = "3.6.1"
+license = "GPL-3.0"
+source = "https://www.sumatrapdfreader.org/download-free-pdf-viewer"
+url = "https://www.sumatrapdfreader.org/dl/rel/3.6.1/SumatraPDF-3.6.1-64.zip"
+exe = "SumatraPDF-3.6.1-64.exe"
+
+[[tool]]
+id = "hxd"
+name = "HxD"
+category = "Utilities"
+license = "Freeware"
+source = "https://mh-nexus.de/en/hxd/"
+kind = "manual"
+exe = "HxD.exe"
+notes = "mh-nexus.de refuses scripted downloads. Download 'HxD Portable' from the site, extract, and put the files in build-tools/downloads/manual/hxd/."
+
+[[tool]]
+id = "putty"
+name = "PuTTY"
+category = "Utilities"
+version = "0.85"
+license = "MIT"
+source = "https://www.chiark.greenend.org.uk/~sgtatham/putty/latest.html"
+url = "https://the.earth.li/~sgtatham/putty/latest/w64/putty.zip"
+exe = "putty.exe"
+
+[[tool]]
+id = "winscp"
+name = "WinSCP"
+category = "Utilities"
+version = "6.7.1"
+license = "GPL-3.0"
+source = "https://winscp.net/eng/downloads.php"
+url = "https://downloads.sourceforge.net/project/winscp/WinSCP/6.7.1/WinSCP-6.7.1-Portable.zip"
+ua = "curl"
+exe = "WinSCP.exe"
+
+[[tool]]
+id = "unstoppablecopier"
+name = "Unstoppable Copier"
+category = "Utilities"
+version = "5.2"
+license = "Freeware"
+source = "https://www.roadkil.net/program.php?ProgramID=29"
+kind = "local"
+local = "S:/Corvus/PortableApps/Unstoppablecopier/UnstopCpy_5_2_Win2K_UP.exe"
+exe = "UnstopCpy_5_2_Win2K_UP.exe"
+notes = "Same 5.2 build the vendor ships; roadkil.net only offers an installer, so the bare exe from the old drive is reused."
+
+# =================================================================== Boot images (Ventoy menu)
+
+[[boot]]
+name = "Lockpick.wim"
+local = "M:/Password_Removal/Jayro's_Lockpick/Lockpick.wim"
+version = "2021-12"
+source = "Jayro's Lockpick (from the MediCat drive)"
+menu = "Jayro's Lockpick"
+
+[[boot]]
+name = "BootIt_Bare_Metal.iso"
+local = "M:/Boot_Repair/BootIt_Bare_Metal/BootIt_Bare_Metal.iso"
+version = "2021-03"
+source = "TeraByte BootIt Bare Metal (from the MediCat drive)"
+menu = "BootIt Bare Metal"
+
+[[boot]]
+name = "memtest86-usb.img"
+url = "https://www.memtest86.com/downloads/memtest86-usb.zip"
+pick = "memtest86-usb.img"
+version = "11.7"
+source = "https://www.memtest86.com/download.htm"
+menu = "MemTest86 (UEFI)"
+
+[[boot]]
+name = "mt86plus_9.00_x86_64.iso"
+url = "https://memtest.org/download/v9.00/mt86plus_9.00_x86_64.iso.zip"
+pick = "mt86plus_9.00_x86_64.iso"
+version = "9.00"
+source = "https://memtest.org/"
+menu = "Memtest86+ (Legacy + UEFI)"
+
+[[boot]]
+name = "rescuezilla-2.6.2-64bit.resolute.iso"
+url = "https://github.com/rescuezilla/rescuezilla/releases/download/2.6.2/rescuezilla-2.6.2-64bit.resolute.iso"
+version = "2.6.2 (Ubuntu 26.04 base)"
+source = "https://github.com/rescuezilla/rescuezilla/releases"
+menu = "Rescuezilla"
+
+[[boot]]
+name = "gparted-live-1.8.1-6-amd64.iso"
+url = "https://downloads.sourceforge.net/gparted/gparted-live-1.8.1-6-amd64.iso"
+ua = "curl"
+version = "1.8.1-6"
+source = "https://gparted.org/download.php"
+menu = "GParted Live"
+
+[[boot]]
+name = "shredos-2025.11_32_x86-64_v0.43.1.iso"
+url = "https://github.com/PartialVolume/shredos.x86_64/releases/download/v2025.11_32_x86-64_0.43.1/shredos-2025.11_32_x86-64_v0.43.1_20261010.iso"
+version = "2025.11_32 / nwipe 0.43.1"
+source = "https://github.com/PartialVolume/shredos.x86_64/releases"
+menu = "ShredOS (disk wipe)"
+
+[[boot]]
+name = "MacriumRescue.iso"
+local = "S:/Corvus/MacriumRescue.iso"
+version = "Reflect 8 Free 8.0.7783"
+source = "Built with Macrium Reflect's Rescue Media Builder on Aiden's PC"
+menu = "Macrium Reflect Rescue"

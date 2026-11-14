@@ -239,8 +239,7 @@ mod tests {
         assert_eq!(f.shadow, egui::Shadow::NONE);
         assert_eq!(f.outer_margin.left, 0);
         assert_eq!(
-            f.inner_margin.left as u8,
-            INWARD_GLOW_WIDTH,
+            f.inner_margin.left as u8, INWARD_GLOW_WIDTH,
             "PE content must sit inside the glow band"
         );
     }

@@ -5,6 +5,7 @@ members = [
     "crates/corvus",
     "crates/corvus-setup",
     "build-tools/make-icons",
+    "build-tools/stage-payload",
 ]
 
 [workspace.package]
