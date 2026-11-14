@@ -126,3 +126,13 @@ Games (3D Pinball, Kobo Deluxe, Mines, Solitaire, Sudoku, TileWorld), chat/media
 5. **Shop-use licences:** OCCT (free = personal only), WhoCrashed (free = home only), WizTree (free = home only), Emsisoft Emergency Kit (free = private use), Dr.Web CureIt (home only). None are AV-flagged; this is a terms question. Your call per tool — BlueScreenView, WinDirStat 2 and TestDisk are clean alternatives for three of them.
 6. **Macrium Reflect:** installed copy is **Reflect 8 Free, v8.0.7783**, licensee "Free User". Copying `C:\Program Files\Macrium\Reflect` to the stick is not a form Macrium supports: Reflect needs its service, VSS helper and mount drivers registered on the host, so it would not run as a portable exe. Its supported "portable" form is the **Rescue Media** (a bootable WinPE ISO built by Reflect's own Rescue Media Builder) — that drops straight into `Boot\` and Ventoy boots it. Reflect Free was discontinued in Jan 2024 and is no longer downloadable, so building that rescue ISO from this install now is worth doing. Recommendation: build `Boot\MacriumRescue.iso` with Rescue Media Builder, skip the live-side copy.
 7. **Extras** from section C: any you want kept?
+
+## E. Decisions (Aiden, 2026-11-14)
+
+1. Boot images: `M:\Boot_Repair\BootIt_Bare_Metal\BootIt_Bare_Metal.iso` (3.0 MB, 2021) and `M:\Password_Removal\Jayro's_Lockpick\Lockpick.wim` (258 MB, 2021). M: is the current MediCat drive.
+2. SDI Origin: drop the 11 superseded 2021 driver packs; keep the 2026 set.
+3. AIDA64: no licence owned; ship official AIDA64 Extreme portable (trial).
+4. Browser: ungoogled-chromium official portable ZIP.
+5. Shop-use licence terms: no change requested; tools stay as the brief lists them. Terms noted per tool in tools.toml/credits.
+6. Macrium: build a Rescue Media ISO from the installed Reflect 8 Free into Boot\; no live-side copy.
+7. Extras: keep all of section C's "worth a second look" list (Notepad++, Explorer++, Q-Dir, SumatraPDF, HxD, Rufus, PuTTY, WinSCP, RAMMap/VMMap, Dead Pixel Tester, Unstoppable Copier, Media Creation Tools, Error Lookup), refetched from vendors.
