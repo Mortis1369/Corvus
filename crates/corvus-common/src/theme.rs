@@ -1,14 +1,15 @@
-//! The Corvus look: always dark, borderless, with a light-grey glow that falls off into the
+//! The Corvus look: always dark, borderless, with a soft white glow that falls off into the
 //! black window body.
 //!
 //! Two ways to draw the glow, chosen once at startup by [`GlowStyle::detect`]:
 //!
 //! * [`GlowStyle::Composited`] — live Windows with DWM compositing. The window is transparent
-//!   with a 24 px outer margin, and the frame's `Shadow` paints a soft grey halo outside the
-//!   rounded body. This is the brief's starting-point snippet, verified against egui 0.37.
+//!   with a [`MARGIN`] outer margin, and the frame's `Shadow` paints a white halo that fades to
+//!   nothing outside the rounded body. Same shape as the brief's starting-point snippet
+//!   (verified against egui 0.37), with the colour turned up to full white per Aiden.
 //! * [`GlowStyle::Inward`] — WinPE, where compositing may be absent and a transparent margin
 //!   renders as solid black. The window is opaque with no margin, and the glow is a stack of
-//!   nested rounded-rect strokes stepping grey → black *inside* the window edge.
+//!   nested rounded-rect strokes easing white → black *inside* the window edge.
 //!
 //! Both programs call [`apply`] once for the shared palette/visuals, then wrap their UI in
 //! [`window_frame`] and, for the inward style, call [`paint_inward_glow`] after drawing.
@@ -31,12 +32,14 @@ pub const BORDER: Color32 = Color32::from_rgb(48, 48, 48);
 pub const TEXT: Color32 = Color32::from_rgb(230, 230, 230);
 /// Secondary text, tags, disabled tiles.
 pub const TEXT_DIM: Color32 = Color32::from_rgb(120, 120, 120);
-/// The glow colour (light grey, partly transparent).
+/// The glow colour at the body edge: white, fading out across the blur.
 pub fn glow() -> Color32 {
-    Color32::from_rgba_unmultiplied(180, 180, 180, 90)
+    Color32::from_rgba_unmultiplied(255, 255, 255, 200)
 }
 /// Brightest edge of the inward glow, before it fades to [`BG`].
-pub const GLOW_EDGE: Color32 = Color32::from_rgb(120, 120, 120);
+pub const GLOW_EDGE: Color32 = Color32::WHITE;
+/// Blur width of the composited shadow. Must stay below [`MARGIN`] or it clips.
+pub const GLOW_BLUR: u8 = 36;
 /// Muted warning tint for "missing" / "changed" tags.
 pub const WARN: Color32 = Color32::from_rgb(190, 150, 70);
 /// Muted red for destructive power actions.
@@ -45,9 +48,10 @@ pub const DANGER: Color32 = Color32::from_rgb(170, 70, 70);
 /// Corner radius of the window body.
 pub const CORNER: u8 = 10;
 /// Transparent margin around the body in composited mode (room for the shadow).
-pub const MARGIN: f32 = 24.0;
-/// Width of the inward glow band in PE mode.
-pub const INWARD_GLOW_WIDTH: u8 = 12;
+pub const MARGIN: f32 = 40.0;
+/// Width of the inward glow band in PE mode. Content is inset by this much so nothing sits
+/// under the bright edge.
+pub const INWARD_GLOW_WIDTH: u8 = 24;
 
 /// What `eframe::App::clear_color` should return. Transparent for the composited glow,
 /// opaque black for the inward one.
@@ -94,6 +98,7 @@ impl GlowStyle {
 }
 
 /// Viewport settings shared by both programs: borderless, transparent when composited.
+/// `size` is the full window including the glow margin; see [`outer_size`].
 pub fn viewport_builder(style: GlowStyle, title: &str, size: [f32; 2]) -> egui::ViewportBuilder {
     egui::ViewportBuilder::default()
         .with_title(title)
@@ -101,7 +106,15 @@ pub fn viewport_builder(style: GlowStyle, title: &str, size: [f32; 2]) -> egui::
         .with_decorations(false)
         .with_transparent(style.is_transparent())
         .with_inner_size(size)
-        .with_min_inner_size([640.0, 420.0])
+}
+
+/// Full window size for a body of `body` points: adds the glow margin when composited.
+pub fn outer_size(style: GlowStyle, body: egui::Vec2) -> egui::Vec2 {
+    if style.is_transparent() {
+        body + egui::vec2(2.0 * MARGIN, 2.0 * MARGIN)
+    } else {
+        body
+    }
 }
 
 /// Install the dark palette into the context. Call once at startup. No light theme exists.
@@ -153,7 +166,7 @@ pub fn apply(ctx: &egui::Context) {
 
 /// The outermost frame for the whole window.
 ///
-/// Composited: black rounded body, 24 px transparent margin, grey shadow all round (offset 0).
+/// Composited: black rounded body, [`MARGIN`] transparent margin, white shadow all round (offset 0).
 /// Inward: black body filling the window, no margin, no shadow — [`paint_inward_glow`] adds the edge.
 pub fn window_frame(style: GlowStyle) -> egui::Frame {
     match style {
@@ -164,24 +177,25 @@ pub fn window_frame(style: GlowStyle) -> egui::Frame {
             .inner_margin(0.0)
             .shadow(egui::Shadow {
                 offset: [0, 0],
-                blur: 24,
-                spread: 2,
+                blur: GLOW_BLUR,
+                spread: 3,
                 color: glow(),
             }),
         GlowStyle::Inward => egui::Frame::new()
             .fill(BG)
             .corner_radius(0)
             .outer_margin(0.0)
-            .inner_margin(0.0),
+            .inner_margin(INWARD_GLOW_WIDTH as f32),
     }
 }
 
-/// Paint the PE glow: [`INWARD_GLOW_WIDTH`] one-pixel rounded strokes, brightest at the window
-/// edge and fading to the body colour. Call after the UI has been drawn so it sits on top.
+/// Paint the PE glow: [`INWARD_GLOW_WIDTH`] one-pixel rounded strokes, white at the window
+/// edge and easing out to the body colour. Call after the UI has been drawn so it sits on top.
 pub fn paint_inward_glow(painter: &egui::Painter, rect: Rect) {
     let steps = INWARD_GLOW_WIDTH as u32;
     for i in 0..steps {
-        let t = i as f32 / steps as f32; // 0 at edge → 1 inside
+        let lin = i as f32 / steps as f32; // 0 at edge → 1 inside
+        let t = lin.powf(0.55); // white at the edge, falls off quickly, long dim tail
         let color = lerp_color(GLOW_EDGE, BG, t);
         let r = rect.shrink(i as f32);
         painter.rect_stroke(r, CORNER, Stroke::new(1.0, color), StrokeKind::Inside);
@@ -212,14 +226,23 @@ mod tests {
     fn frames_match_brief() {
         let f = window_frame(GlowStyle::Composited);
         assert_eq!(f.fill, BG);
-        assert_eq!(f.shadow.blur, 24);
-        assert_eq!(f.shadow.spread, 2);
+        assert_eq!(f.shadow.blur, GLOW_BLUR);
+        assert!(
+            (GLOW_BLUR as f32 + f.shadow.spread as f32) < MARGIN,
+            "glow must fit inside the transparent margin"
+        );
+        assert_eq!(f.shadow.spread, 3);
         assert_eq!(f.shadow.offset, [0, 0]);
         assert_eq!(f.outer_margin.left as f32, MARGIN);
 
         let f = window_frame(GlowStyle::Inward);
         assert_eq!(f.shadow, egui::Shadow::NONE);
         assert_eq!(f.outer_margin.left, 0);
+        assert_eq!(
+            f.inner_margin.left as u8,
+            INWARD_GLOW_WIDTH,
+            "PE content must sit inside the glow band"
+        );
     }
 
     #[test]

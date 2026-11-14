@@ -121,6 +121,16 @@ impl PowerAction {
         }
     }
 
+    /// Button text in the narrow portrait power bar; the full name is in the tooltip.
+    pub fn short_label(self) -> &'static str {
+        match self {
+            PowerAction::ShutDown => "Shut down",
+            PowerAction::Restart => "Restart",
+            PowerAction::RestartUefi => "UEFI",
+            PowerAction::RestartAdvanced => "Advanced",
+        }
+    }
+
     /// (program, arguments, needs elevation)
     pub fn command(self, in_pe: bool) -> Option<(&'static str, &'static str, bool)> {
         if in_pe {

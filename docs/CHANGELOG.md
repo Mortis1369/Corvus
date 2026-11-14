@@ -3,6 +3,22 @@
 All dates are the day the work was done. "VERIFY" notes record where the brief was checked against
 real docs/source and what was found.
 
+## 2026-11-14 — Launcher shape change (Aiden's alteration)
+
+- `Corvus.exe` is now a fixed **9:16 portrait** panel pinned to the **top-right** of the primary
+  monitor's work area (screen minus taskbar, read via `SPI_GETWORKAREA`). Body is 432x768 on a
+  1080p screen and shrinks (keeping 9:16) on shorter work areas, never below 540 tall. Window is
+  not resizable; the window starts hidden, is sized and positioned on the first frame, then shown,
+  so it never flashes at the OS default position. Drag still works; double-click the title strip to
+  snap it back to the corner.
+- Layout reworked for the narrow body: category chips in a sideways-scrolling strip replace the
+  sidebar, tiles flow into as many columns as fit (3 at 432 wide), the power bar is two rows
+  (status, then four equal buttons with short labels "UEFI" / "Advanced"; full names in tooltips).
+  Resize handle and maximise removed.
+- Glow is now **white** falling off to nothing: composited shadow blur 36 / spread 3 / white at
+  alpha 200 inside a 40 px transparent margin. PE's inward glow is a 24 px band easing white → black,
+  and the content is inset by that band so nothing sits under the bright edge.
+
 ## 2026-11-14 — Milestone 3: `Corvus.exe`
 
 - New crate `crates/corvus` → single 4.9 MB `Corvus.exe`, no external DLLs, icon and version block

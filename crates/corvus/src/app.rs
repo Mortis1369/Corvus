@@ -1,15 +1,18 @@
 //! The launcher window.
 //!
-//! Layout (all inside one rounded, glowing frame from `corvus_common::theme`):
+//! A fixed 9:16 portrait panel pinned to the top-right of the primary monitor's work area,
+//! inside one rounded, glowing frame from `corvus_common::theme`:
 //!
 //! ```text
-//! ┌ title strip: logo · Corvus · Live/PE · drive        – × ┐
-//! │ sidebar        │ tiles for the selected category         │
-//! │  categories    │   [icon]  [icon]  [icon] ...            │
-//! │  Credits       │                                         │
-//! │  Problems      │                                         │
-//! ├ power bar: status …        Shut down Restart UEFI Adv ──┤
-//! └─────────────────────────────────────────────────────── ◢ ┘
+//! ┌ logo · Corvus · Live/PE              – × ┐
+//! │ [Diagnostics 6] [System 3] [Disk] … ▸     │  category chips, scroll sideways
+//! │                                           │
+//! │   [icon]     [icon]     [icon]            │  tile grid, scrolls vertically
+//! │   HWiNFO     CPU-Z      GPU-Z             │
+//! │                                           │
+//! ├ 17 tools · 5 missing ─────────────────────┤
+//! │ [Shut down] [Restart] [UEFI] [Advanced]   │
+//! └───────────────────────────────────────────┘
 //! ```
 //!
 //! Robustness rules: tool status is checked at load *and* on click; a missing tool is a greyed
@@ -24,9 +27,9 @@ use corvus_common::theme::{
 };
 use corvus_common::{Manifest, Tool, ToolStatus};
 use egui::{
-    pos2, vec2, Align, Align2, Color32, CursorIcon, FontId, Frame, Id, Layout, Margin, Order,
-    PointerButton, Rect, Response, RichText, Sense, Stroke, StrokeKind, TextureHandle,
-    TextureOptions, Ui, UiBuilder, ViewportCommand,
+    pos2, vec2, Align, Align2, Color32, FontId, Frame, Id, Layout, Margin, Order, PointerButton,
+    Rect, Response, RichText, Sense, Stroke, StrokeKind, TextureHandle, TextureOptions, Ui,
+    UiBuilder, Vec2, ViewportCommand,
 };
 use std::path::PathBuf;
 use std::sync::mpsc::{self, Receiver};
@@ -34,10 +37,18 @@ use std::time::{Duration, Instant};
 
 pub const LOGO_PNG: &[u8] = include_bytes!("../../../branding/generated/karasu-256.png");
 
+/// Body aspect ratio, width : height.
+const ASPECT: f32 = 9.0 / 16.0;
+/// Tallest body we ever use; shorter work areas shrink it (keeping 9:16).
+const BODY_H_MAX: f32 = 768.0;
+const BODY_H_MIN: f32 = 540.0;
+
 const TITLE_H: f32 = 40.0;
-const POWER_H: f32 = 50.0;
-const NAV_W: f32 = 190.0;
-const TILE: egui::Vec2 = vec2(150.0, 110.0);
+const TABS_H: f32 = 38.0;
+const POWER_H: f32 = 76.0;
+const TILE_MIN_W: f32 = 118.0;
+const TILE_H: f32 = 104.0;
+const GAP: f32 = 10.0;
 const ICON_PX: u32 = 48;
 const TOAST_SECS: u64 = 4;
 const CONFIRM_SECS: u64 = 4;
@@ -78,6 +89,43 @@ pub struct CorvusApp {
     hash_rx: Option<Receiver<(usize, ToolStatus)>>,
     power_confirm: Option<(PowerAction, Instant)>,
     log_path: Option<PathBuf>,
+    placed: bool,
+}
+
+// ---- window geometry ------------------------------------------------------------------------
+
+/// Full window size (body + glow margin) for a work area `work_h` points tall.
+pub fn window_outer_size(glow: GlowStyle, work_h: f32) -> Vec2 {
+    let inset = if glow.is_transparent() {
+        2.0 * theme::MARGIN
+    } else {
+        0.0
+    };
+    let body_h = (work_h - inset).clamp(BODY_H_MIN, BODY_H_MAX);
+    let body_w = (body_h * ASPECT).round();
+    theme::outer_size(glow, vec2(body_w, body_h))
+}
+
+/// Primary monitor's work area (screen minus taskbar) in egui points.
+fn work_area_points(pixels_per_point: f32) -> Option<Rect> {
+    use windows_sys::Win32::Foundation::RECT;
+    use windows_sys::Win32::UI::WindowsAndMessaging::{SystemParametersInfoW, SPI_GETWORKAREA};
+    let mut r = RECT {
+        left: 0,
+        top: 0,
+        right: 0,
+        bottom: 0,
+    };
+    // SAFETY: SPI_GETWORKAREA writes one RECT into pvparam; `r` is exactly that.
+    let ok = unsafe { SystemParametersInfoW(SPI_GETWORKAREA, 0, &mut r as *mut RECT as *mut _, 0) };
+    if ok == 0 || pixels_per_point <= 0.0 {
+        return None;
+    }
+    let p = pixels_per_point;
+    Some(Rect::from_min_max(
+        pos2(r.left as f32 / p, r.top as f32 / p),
+        pos2(r.right as f32 / p, r.bottom as f32 / p),
+    ))
 }
 
 impl CorvusApp {
@@ -172,6 +220,7 @@ impl CorvusApp {
             hash_rx,
             power_confirm: None,
             log_path: s.log_path,
+            placed: false,
         }
     }
 
@@ -179,6 +228,34 @@ impl CorvusApp {
         let msg = msg.into();
         log::info!("toast: {msg}");
         self.toast = Some((msg, Instant::now()));
+    }
+
+    /// Size the window to the work area and pin it to the top-right corner. Runs on the first
+    /// frame (the window starts hidden so it never flashes at the OS default position) and
+    /// again whenever `placed` is reset (double-click on the title strip snaps it back).
+    fn place_window(&mut self, ctx: &egui::Context) {
+        if self.placed {
+            return;
+        }
+        self.placed = true;
+        match work_area_points(ctx.pixels_per_point()) {
+            Some(work) => {
+                let outer = window_outer_size(self.glow, work.height());
+                log::info!(
+                    "work area {:?} → window {}x{} at top-right",
+                    work,
+                    outer.x,
+                    outer.y
+                );
+                ctx.send_viewport_cmd(ViewportCommand::InnerSize(outer));
+                ctx.send_viewport_cmd(ViewportCommand::OuterPosition(pos2(
+                    work.max.x - outer.x,
+                    work.min.y,
+                )));
+            }
+            None => log::warn!("could not read the work area; leaving window where the OS put it"),
+        }
+        ctx.send_viewport_cmd(ViewportCommand::Visible(true));
     }
 
     fn poll_hashes(&mut self) {
@@ -274,8 +351,7 @@ impl CorvusApp {
                     ui.ctx().send_viewport_cmd(ViewportCommand::StartDrag);
                 }
                 if resp.double_clicked() {
-                    let max = ui.input(|i| i.viewport().maximized.unwrap_or(false));
-                    ui.ctx().send_viewport_cmd(ViewportCommand::Maximized(!max));
+                    self.placed = false; // snap back to the top-right
                 }
                 ui.painter().line_segment(
                     [rect.left_bottom(), rect.right_bottom()],
@@ -293,17 +369,14 @@ impl CorvusApp {
                             ui.add_space(8.0);
                         }
                         ui.label(RichText::new("Corvus").size(16.0).strong().color(TEXT));
-                        ui.add_space(12.0);
-                        let env = if self.in_pe { "WinPE" } else { "Live Windows" };
-                        ui.label(RichText::new(env).size(12.0).color(TEXT_DIM));
-                        if let Some(root) = &self.root {
-                            ui.add_space(8.0);
-                            ui.label(
-                                RichText::new(root.display().to_string())
-                                    .size(12.0)
-                                    .color(TEXT_DIM),
-                            );
-                        }
+                        ui.add_space(10.0);
+                        let env = if self.in_pe { "WinPE" } else { "Live" };
+                        let tip = match &self.root {
+                            Some(r) => format!("Drive: {}", r.display()),
+                            None => "Drive not found".to_string(),
+                        };
+                        ui.label(RichText::new(env).size(12.0).color(TEXT_DIM))
+                            .on_hover_text(tip);
                         ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
                             ui.add_space(6.0);
                             if strip_button(ui, "×", "Close").clicked() {
@@ -318,15 +391,68 @@ impl CorvusApp {
             });
     }
 
+    fn tabs(&mut self, ui: &mut Ui) {
+        egui::Panel::top("corvus-tabs")
+            .exact_size(TABS_H)
+            .show_separator_line(false)
+            .frame(
+                Frame::new()
+                    .fill(Color32::TRANSPARENT)
+                    .inner_margin(Margin::symmetric(10, 0)),
+            )
+            .show(ui, |ui| {
+                let mut next: Option<Page> = None;
+                egui::ScrollArea::horizontal()
+                    .scroll_bar_visibility(egui::scroll_area::ScrollBarVisibility::AlwaysHidden)
+                    .show(ui, |ui| {
+                        ui.horizontal_centered(|ui| {
+                            ui.spacing_mut().item_spacing.x = 6.0;
+                            for cat in &self.categories {
+                                let n = self
+                                    .tiles
+                                    .iter()
+                                    .filter(|t| t.tool.category == *cat && t.status.is_launchable())
+                                    .count();
+                                let sel = self.page == Page::Category(cat.clone());
+                                if chip(ui, cat, Some(n), sel).clicked() {
+                                    next = Some(Page::Category(cat.clone()));
+                                }
+                            }
+                            ui.add_space(6.0);
+                            if chip(ui, "Credits", None, self.page == Page::Credits).clicked() {
+                                next = Some(Page::Credits);
+                            }
+                            let problems = self.problem_count();
+                            if (problems > 0 || self.root.is_none())
+                                && chip(ui, "Problems", Some(problems), self.page == Page::Problems)
+                                    .clicked()
+                            {
+                                next = Some(Page::Problems);
+                            }
+                        });
+                    });
+                if let Some(p) = next {
+                    self.page = p;
+                }
+            });
+    }
+
     fn power_bar(&mut self, ui: &mut Ui) {
         egui::Panel::bottom("corvus-power")
             .exact_size(POWER_H)
             .show_separator_line(false)
-            .frame(Frame::new().fill(Color32::TRANSPARENT))
+            .frame(
+                Frame::new()
+                    .fill(Color32::TRANSPARENT)
+                    .inner_margin(Margin::symmetric(12, 0)),
+            )
             .show(ui, |ui| {
                 let rect = ui.max_rect();
                 ui.painter().line_segment(
-                    [rect.left_top(), rect.right_top()],
+                    [
+                        pos2(rect.left() - 12.0, rect.top()),
+                        pos2(rect.right() + 12.0, rect.top()),
+                    ],
                     Stroke::new(1.0, BORDER),
                 );
 
@@ -336,130 +462,66 @@ impl CorvusApp {
                     }
                 }
 
-                ui.scope_builder(
-                    UiBuilder::new()
-                        .max_rect(rect)
-                        .layout(Layout::left_to_right(Align::Center)),
-                    |ui| {
-                        ui.add_space(14.0);
-                        let total = self.tiles.len();
-                        let missing = self
-                            .tiles
-                            .iter()
-                            .filter(|t| t.status == ToolStatus::Missing)
-                            .count();
-                        let status = if self.root.is_none() {
-                            "Corvus drive not found".to_string()
-                        } else if missing == 0 {
-                            format!("{total} tools")
+                ui.add_space(8.0);
+                let total = self.tiles.len();
+                let missing = self
+                    .tiles
+                    .iter()
+                    .filter(|t| t.status == ToolStatus::Missing)
+                    .count();
+                let status = if self.root.is_none() {
+                    "Corvus drive not found".to_string()
+                } else if missing == 0 {
+                    format!("{total} tools")
+                } else {
+                    format!("{total} tools · {missing} missing")
+                };
+                ui.label(RichText::new(status).size(11.5).color(TEXT_DIM));
+                ui.add_space(5.0);
+
+                let actions = PowerAction::available(self.in_pe);
+                let n = actions.len() as f32;
+                let gap = 6.0;
+                let w = ((ui.available_width() - gap * (n - 1.0)) / n).floor();
+                ui.horizontal(|ui| {
+                    ui.spacing_mut().item_spacing.x = gap;
+                    for &action in actions {
+                        let confirming = matches!(self.power_confirm, Some((a, _)) if a == action);
+                        let label = if confirming {
+                            "Confirm?"
                         } else {
-                            format!("{total} tools · {missing} missing")
+                            action.short_label()
                         };
-                        ui.label(RichText::new(status).size(12.0).color(TEXT_DIM));
-
-                        ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-                            ui.add_space(12.0);
-                            ui.spacing_mut().item_spacing.x = 8.0;
-                            let actions = PowerAction::available(self.in_pe);
-                            for &action in actions.iter().rev() {
-                                let confirming = matches!(
-                                    self.power_confirm,
-                                    Some((a, _)) if a == action
-                                );
-                                let label = if confirming {
-                                    format!("Confirm {}", action.label().to_lowercase())
-                                } else {
-                                    action.label().to_string()
-                                };
-                                let btn = egui::Button::new(
-                                    RichText::new(label).size(13.0).color(if confirming {
-                                        Color32::WHITE
-                                    } else {
-                                        TEXT
-                                    }),
-                                )
-                                .fill(if confirming { DANGER } else { SURFACE })
-                                .stroke(Stroke::new(1.0, if confirming { DANGER } else { BORDER }))
-                                .corner_radius(6)
-                                .min_size(vec2(0.0, 30.0));
-                                let resp =
-                                    ui.add(btn).on_hover_text(action.description(self.in_pe));
-                                if resp.clicked() {
-                                    if confirming {
-                                        self.power_confirm = None;
-                                        match action.execute(self.in_pe) {
-                                            Ok(()) => {
-                                                let m = format!("{}…", action.label());
-                                                self.toast(m);
-                                            }
-                                            Err(e) => self.toast(e),
-                                        }
-                                    } else {
-                                        self.power_confirm = Some((action, Instant::now()));
+                        let btn = egui::Button::new(
+                            RichText::new(label).size(12.5).color(if confirming {
+                                Color32::WHITE
+                            } else {
+                                TEXT
+                            }),
+                        )
+                        .fill(if confirming { DANGER } else { SURFACE })
+                        .stroke(Stroke::new(1.0, if confirming { DANGER } else { BORDER }))
+                        .corner_radius(6)
+                        .min_size(vec2(w, 30.0));
+                        let resp = ui
+                            .add_sized(vec2(w, 30.0), btn)
+                            .on_hover_text(action.description(self.in_pe));
+                        if resp.clicked() {
+                            if confirming {
+                                self.power_confirm = None;
+                                match action.execute(self.in_pe) {
+                                    Ok(()) => {
+                                        let m = format!("{}…", action.label());
+                                        self.toast(m);
                                     }
+                                    Err(e) => self.toast(e),
                                 }
+                            } else {
+                                self.power_confirm = Some((action, Instant::now()));
                             }
-                        });
-                    },
-                );
-            });
-    }
-
-    fn sidebar(&mut self, ui: &mut Ui) {
-        egui::Panel::left("corvus-nav")
-            .exact_size(NAV_W)
-            .resizable(false)
-            .show_separator_line(false)
-            .frame(
-                Frame::new()
-                    .fill(Color32::TRANSPARENT)
-                    .inner_margin(Margin::symmetric(10, 12)),
-            )
-            .show(ui, |ui| {
-                let rect = ui.max_rect();
-                ui.painter().line_segment(
-                    [
-                        pos2(rect.right() + 10.0, rect.top() - 12.0),
-                        pos2(rect.right() + 10.0, rect.bottom() + 12.0),
-                    ],
-                    Stroke::new(1.0, BORDER),
-                );
-                ui.spacing_mut().item_spacing.y = 4.0;
-
-                let cats = self.categories.clone();
-                for cat in cats {
-                    let n = self
-                        .tiles
-                        .iter()
-                        .filter(|t| t.tool.category == cat && t.status.is_launchable())
-                        .count();
-                    let selected = self.page == Page::Category(cat.clone());
-                    if nav_button(ui, &cat, Some(n), selected).clicked() {
-                        self.page = Page::Category(cat);
+                        }
                     }
-                }
-
-                ui.add_space(10.0);
-                let r = ui.available_rect_before_wrap();
-                ui.painter().line_segment(
-                    [
-                        pos2(r.left() + 6.0, r.top()),
-                        pos2(r.right() - 6.0, r.top()),
-                    ],
-                    Stroke::new(1.0, BORDER),
-                );
-                ui.add_space(10.0);
-
-                if nav_button(ui, "Credits", None, self.page == Page::Credits).clicked() {
-                    self.page = Page::Credits;
-                }
-                let problems = self.problem_count();
-                if (problems > 0 || self.root.is_none())
-                    && nav_button(ui, "Problems", Some(problems), self.page == Page::Problems)
-                        .clicked()
-                {
-                    self.page = Page::Problems;
-                }
+                });
             });
     }
 
@@ -468,7 +530,7 @@ impl CorvusApp {
             .frame(
                 Frame::new()
                     .fill(Color32::TRANSPARENT)
-                    .inner_margin(Margin::symmetric(18, 12)),
+                    .inner_margin(Margin::symmetric(12, 8)),
             )
             .show(ui, |ui| match self.page.clone() {
                 Page::Category(cat) => self.category_page(ui, &cat),
@@ -481,25 +543,34 @@ impl CorvusApp {
     }
 
     fn category_page(&mut self, ui: &mut Ui, cat: &str) {
-        ui.add_space(4.0);
-        ui.label(RichText::new(cat).size(22.0).strong().color(TEXT));
-        ui.add_space(10.0);
-
         let mut clicked: Option<usize> = None;
         egui::ScrollArea::vertical()
             .auto_shrink(false)
             .show(ui, |ui| {
-                ui.spacing_mut().item_spacing = vec2(12.0, 12.0);
-                ui.horizontal_wrapped(|ui| {
-                    for (i, t) in self.tiles.iter().enumerate() {
-                        if t.tool.category != cat {
-                            continue;
+                let avail = ui.available_width();
+                let cols = (((avail + GAP) / (TILE_MIN_W + GAP)).floor() as usize).max(1);
+                let tile_w = ((avail - GAP * (cols as f32 - 1.0)) / cols as f32).floor();
+                let size = vec2(tile_w, TILE_H);
+
+                let idx: Vec<usize> = self
+                    .tiles
+                    .iter()
+                    .enumerate()
+                    .filter(|(_, t)| t.tool.category == cat)
+                    .map(|(i, _)| i)
+                    .collect();
+
+                ui.spacing_mut().item_spacing = vec2(GAP, GAP);
+                for row in idx.chunks(cols) {
+                    ui.horizontal(|ui| {
+                        for &i in row {
+                            if tile_ui(ui, &self.tiles[i], size).clicked() {
+                                clicked = Some(i);
+                            }
                         }
-                        if tile_ui(ui, t).clicked() {
-                            clicked = Some(i);
-                        }
-                    }
-                });
+                    });
+                }
+                ui.add_space(4.0);
             });
 
         if let Some(i) = clicked {
@@ -554,66 +625,53 @@ impl CorvusApp {
 
     fn problems_page(&mut self, ui: &mut Ui) {
         ui.add_space(4.0);
-        ui.label(RichText::new("Problems").size(22.0).strong().color(TEXT));
+        ui.label(RichText::new("Problems").size(20.0).strong().color(TEXT));
         ui.add_space(6.0);
         ui.label(
             RichText::new(
                 "Nothing here stops Corvus from running. These are entries that were skipped, \
                  tools that aren't on the drive, or exes that differ from what tools.toml recorded.",
             )
+            .size(12.0)
             .color(TEXT_DIM),
         );
-        ui.add_space(14.0);
+        ui.add_space(12.0);
 
         egui::ScrollArea::vertical()
             .auto_shrink(false)
             .show(ui, |ui| {
                 if self.root.is_none() {
-                    ui.label(RichText::new("Drive not found").size(15.0).strong().color(WARN));
+                    ui.label(RichText::new("Drive not found").size(14.0).strong().color(WARN));
                     ui.label(
                         RichText::new(
                             "Corvus.exe should sit in \\Launcher\\ on the drive, or a volume labelled \
                              CORVUS should be mounted. Neither was true at start-up.",
                         )
+                        .size(12.0)
                         .color(TEXT_DIM),
                     );
                     ui.add_space(12.0);
                 }
 
                 if !self.warnings.is_empty() {
-                    ui.label(RichText::new("tools.toml").size(15.0).strong().color(TEXT));
+                    ui.label(RichText::new("tools.toml").size(14.0).strong().color(TEXT));
                     for w in &self.warnings {
-                        ui.label(RichText::new(format!("•  {w}")).color(TEXT_DIM));
+                        ui.label(RichText::new(format!("•  {w}")).size(12.0).color(TEXT_DIM));
                     }
                     ui.add_space(12.0);
                 }
 
-                let missing: Vec<&TileState> = self
-                    .tiles
-                    .iter()
-                    .filter(|t| t.status == ToolStatus::Missing)
-                    .collect();
-                if !missing.is_empty() {
-                    ui.label(RichText::new("Missing").size(15.0).strong().color(TEXT));
-                    for t in missing {
-                        ui.label(
-                            RichText::new(format!("•  {}  —  {}", t.tool.name, t.tool.path))
-                                .color(TEXT_DIM),
-                        );
+                for (title, want) in [("Missing", ToolStatus::Missing), ("Changed", ToolStatus::Changed)] {
+                    let list: Vec<&TileState> =
+                        self.tiles.iter().filter(|t| t.status == want).collect();
+                    if list.is_empty() {
+                        continue;
                     }
-                    ui.add_space(12.0);
-                }
-
-                let changed: Vec<&TileState> = self
-                    .tiles
-                    .iter()
-                    .filter(|t| t.status == ToolStatus::Changed)
-                    .collect();
-                if !changed.is_empty() {
-                    ui.label(RichText::new("Changed").size(15.0).strong().color(TEXT));
-                    for t in changed {
+                    ui.label(RichText::new(title).size(14.0).strong().color(TEXT));
+                    for t in list {
                         ui.label(
-                            RichText::new(format!("•  {}  —  {}", t.tool.name, t.tool.path))
+                            RichText::new(format!("•  {}\n    {}", t.tool.name, t.tool.path))
+                                .size(12.0)
                                 .color(TEXT_DIM),
                         );
                     }
@@ -641,60 +699,21 @@ impl CorvusApp {
         } else {
             0.0
         };
+        let width = ctx.content_rect().width() - 2.0 * inset - 24.0;
         egui::Area::new(Id::unique("corvus-toast"))
             .order(Order::Tooltip)
-            .anchor(Align2::CENTER_BOTTOM, vec2(0.0, -(POWER_H + inset + 14.0)))
+            .anchor(Align2::CENTER_BOTTOM, vec2(0.0, -(POWER_H + inset + 10.0)))
             .interactable(false)
             .show(ctx, |ui| {
                 Frame::new()
                     .fill(SURFACE_ACTIVE)
                     .stroke(Stroke::new(1.0, TEXT_DIM))
                     .corner_radius(8)
-                    .inner_margin(Margin::symmetric(14, 10))
+                    .inner_margin(Margin::symmetric(12, 10))
                     .show(ui, |ui| {
-                        ui.set_max_width(520.0);
-                        ui.label(RichText::new(msg).color(TEXT));
+                        ui.set_max_width(width.max(120.0));
+                        ui.label(RichText::new(msg).size(12.5).color(TEXT));
                     });
-            });
-    }
-
-    /// Bottom-right drag handle for resizing a borderless window.
-    fn resize_handle(&self, ctx: &egui::Context) {
-        let inset = if self.glow.is_transparent() {
-            theme::MARGIN
-        } else {
-            0.0
-        };
-        let screen = ctx.content_rect();
-        let size = 18.0;
-        let corner = Rect::from_min_max(
-            pos2(screen.max.x - inset - size, screen.max.y - inset - size),
-            pos2(screen.max.x - inset, screen.max.y - inset),
-        );
-        egui::Area::new(Id::unique("corvus-resize"))
-            .order(Order::Foreground)
-            .fixed_pos(corner.min)
-            .show(ctx, |ui| {
-                let (rect, resp) = ui.allocate_exact_size(corner.size(), Sense::drag());
-                if resp.hovered() || resp.dragged() {
-                    ctx.set_cursor_icon(CursorIcon::ResizeNwSe);
-                }
-                if resp.drag_started_by(PointerButton::Primary) {
-                    ctx.send_viewport_cmd(ViewportCommand::BeginResize(
-                        egui::ResizeDirection::SouthEast,
-                    ));
-                }
-                let c = if resp.hovered() { TEXT } else { TEXT_DIM };
-                let p = ui.painter();
-                let br = rect.max - vec2(5.0, 5.0);
-                p.line_segment(
-                    [br - vec2(8.0, 0.0), br - vec2(0.0, 8.0)],
-                    Stroke::new(1.0, c),
-                );
-                p.line_segment(
-                    [br - vec2(4.0, 0.0), br - vec2(0.0, 4.0)],
-                    Stroke::new(1.0, c),
-                );
             });
     }
 }
@@ -707,6 +726,7 @@ impl eframe::App for CorvusApp {
     fn ui(&mut self, ui: &mut Ui, _frame: &mut eframe::Frame) {
         let ctx = ui.ctx().clone();
         let ctx = &ctx;
+        self.place_window(ctx);
         self.poll_hashes();
         self.load_some_icons(ctx);
 
@@ -715,7 +735,7 @@ impl eframe::App for CorvusApp {
             .show(ui, |ui| {
                 self.title_strip(ui);
                 self.power_bar(ui);
-                self.sidebar(ui);
+                self.tabs(ui);
                 self.content(ui);
             });
 
@@ -728,7 +748,6 @@ impl eframe::App for CorvusApp {
         }
 
         self.toast_ui(ctx);
-        self.resize_handle(ctx);
 
         if self.toast.is_some() || self.power_confirm.is_some() {
             ctx.request_repaint_after(Duration::from_millis(250));
@@ -764,46 +783,61 @@ fn strip_button(ui: &mut Ui, glyph: &str, tip: &str) -> Response {
     resp.on_hover_text(tip)
 }
 
-fn nav_button(ui: &mut Ui, text: &str, count: Option<usize>, selected: bool) -> Response {
-    let w = ui.available_width();
-    let (rect, resp) = ui.allocate_exact_size(vec2(w, 30.0), Sense::click());
+/// Category chip for the tab strip.
+fn chip(ui: &mut Ui, text: &str, count: Option<usize>, selected: bool) -> Response {
+    let font = FontId::proportional(13.0);
+    let label = match count {
+        Some(n) => format!("{text}  {n}"),
+        None => text.to_string(),
+    };
+    let galley = ui
+        .ctx()
+        .fonts_mut(|f| f.layout_no_wrap(label.clone(), font.clone(), TEXT));
+    let size = vec2(galley.size().x + 20.0, 26.0);
+    let (rect, resp) = ui.allocate_exact_size(size, Sense::click());
     let fill = if selected {
         SURFACE_ACTIVE
     } else if resp.hovered() {
         SURFACE_HOVER
     } else {
-        Color32::TRANSPARENT
+        SURFACE
     };
     let p = ui.painter();
-    p.rect_filled(rect, 6, fill);
-    if selected {
-        p.rect_filled(
-            Rect::from_min_size(rect.left_top() + vec2(0.0, 7.0), vec2(3.0, 16.0)),
-            2,
-            TEXT,
-        );
-    }
+    p.rect(
+        rect,
+        13,
+        fill,
+        Stroke::new(1.0, if selected { TEXT_DIM } else { BORDER }),
+        StrokeKind::Inside,
+    );
+    // Name bright, count dim.
+    let name_w = ui.ctx().fonts_mut(|f| {
+        f.layout_no_wrap(text.to_string(), font.clone(), TEXT)
+            .size()
+            .x
+    });
+    let x0 = rect.left() + 10.0;
     p.text(
-        rect.left_center() + vec2(12.0, 0.0),
+        pos2(x0, rect.center().y),
         Align2::LEFT_CENTER,
         text,
-        FontId::proportional(14.0),
+        font.clone(),
         if selected { TEXT } else { TEXT_DIM },
     );
     if let Some(n) = count {
         p.text(
-            rect.right_center() - vec2(10.0, 0.0),
-            Align2::RIGHT_CENTER,
+            pos2(x0 + name_w + 6.0, rect.center().y),
+            Align2::LEFT_CENTER,
             n.to_string(),
-            FontId::proportional(12.0),
+            FontId::proportional(11.5),
             TEXT_DIM,
         );
     }
     resp
 }
 
-fn tile_ui(ui: &mut Ui, t: &TileState) -> Response {
-    let (rect, resp) = ui.allocate_exact_size(TILE, Sense::click());
+fn tile_ui(ui: &mut Ui, t: &TileState, size: Vec2) -> Response {
+    let (rect, resp) = ui.allocate_exact_size(size, Sense::click());
     let launchable = t.status.is_launchable();
     let hovered = resp.hovered();
 
@@ -825,7 +859,7 @@ fn tile_ui(ui: &mut Ui, t: &TileState) -> Response {
 
     // Icon
     let icon_rect = Rect::from_center_size(
-        pos2(rect.center().x, rect.top() + 16.0 + ICON_PX as f32 / 2.0),
+        pos2(rect.center().x, rect.top() + 14.0 + ICON_PX as f32 / 2.0),
         vec2(ICON_PX as f32, ICON_PX as f32),
     );
     let tint = if launchable {
@@ -862,12 +896,12 @@ fn tile_ui(ui: &mut Ui, t: &TileState) -> Response {
 
     // Name
     let name_color = if launchable { TEXT } else { TEXT_DIM };
-    let name = fit_text(ui, &t.tool.name, 13.0, TILE.x - 16.0);
+    let name = fit_text(ui, &t.tool.name, 12.5, size.x - 14.0);
     p.text(
-        pos2(rect.center().x, rect.bottom() - 26.0),
+        pos2(rect.center().x, rect.bottom() - 24.0),
         Align2::CENTER_CENTER,
         name,
-        FontId::proportional(13.0),
+        FontId::proportional(12.5),
         name_color,
     );
 
@@ -879,10 +913,10 @@ fn tile_ui(ui: &mut Ui, t: &TileState) -> Response {
             _ => TEXT_DIM,
         };
         p.text(
-            pos2(rect.center().x, rect.bottom() - 10.0),
+            pos2(rect.center().x, rect.bottom() - 9.0),
             Align2::CENTER_CENTER,
             tag,
-            FontId::proportional(11.0),
+            FontId::proportional(10.5),
             col,
         );
     }

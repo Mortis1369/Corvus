@@ -59,13 +59,18 @@ fn main() {
         },
     };
 
-    let mut viewport = theme::viewport_builder(glow, "Corvus", [1040.0, 700.0]);
+    // Initial size assumes a 1080p work area; the first frame measures the real one, resizes,
+    // pins the window to the top-right and only then makes it visible.
+    let initial = app::window_outer_size(glow, 1040.0);
+    let mut viewport = theme::viewport_builder(glow, "Corvus", [initial.x, initial.y])
+        .with_resizable(false)
+        .with_visible(false);
     if let Some(icon) = icons::icon_data_from_png(app::LOGO_PNG) {
         viewport = viewport.with_icon(icon);
     }
     let options = eframe::NativeOptions {
         viewport,
-        centered: true,
+        centered: false,
         persist_window: false,
         ..Default::default()
     };
