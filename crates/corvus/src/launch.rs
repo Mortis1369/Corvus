@@ -73,7 +73,10 @@ const SW_SHOWNORMAL: i32 = 1;
 pub fn run_tool(root: &Path, tool: &Tool) -> Result<(), String> {
     let exe = tool.resolve(root);
     if !exe.is_file() {
-        return Err(format!("{} is not on this drive ({})", tool.name, tool.path));
+        return Err(format!(
+            "{} is not on this drive ({})",
+            tool.name, tool.path
+        ));
     }
     let verb = if tool.elevate { "runas" } else { "open" };
     log::info!(
@@ -140,8 +143,12 @@ impl PowerAction {
         let what = match self {
             PowerAction::ShutDown => "Force shut down now. Unsaved work is lost.",
             PowerAction::Restart => "Force restart now. Unsaved work is lost.",
-            PowerAction::RestartUefi => "Restart straight into the firmware setup (BIOS/UEFI). Asks for admin.",
-            PowerAction::RestartAdvanced => "Restart into the Windows Advanced Startup menu (safe mode, recovery, etc.).",
+            PowerAction::RestartUefi => {
+                "Restart straight into the firmware setup (BIOS/UEFI). Asks for admin."
+            }
+            PowerAction::RestartAdvanced => {
+                "Restart into the Windows Advanced Startup menu (safe mode, recovery, etc.)."
+            }
         };
         match self.command(in_pe) {
             Some((p, a, _)) => format!("{what}\n\n{p} {a}"),

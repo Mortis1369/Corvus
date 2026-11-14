@@ -36,9 +36,7 @@ pub fn icon_data_from_png(bytes: &[u8]) -> Option<egui::IconData> {
 /// Pull the first icon out of an exe (or dll/ico) at roughly `size` px.
 pub fn extract_icon(path: &Path, size: u32) -> Option<ColorImage> {
     use std::os::windows::ffi::OsStrExt;
-    use windows_sys::Win32::UI::WindowsAndMessaging::{
-        DestroyIcon, PrivateExtractIconsW, HICON,
-    };
+    use windows_sys::Win32::UI::WindowsAndMessaging::{DestroyIcon, PrivateExtractIconsW, HICON};
 
     let wide: Vec<u16> = path
         .as_os_str()
@@ -70,7 +68,9 @@ pub fn extract_icon(path: &Path, size: u32) -> Option<ColorImage> {
 }
 
 /// Convert an HICON to RGBA. Caller still owns (and must destroy) the icon.
-unsafe fn hicon_to_image(hicon: windows_sys::Win32::UI::WindowsAndMessaging::HICON) -> Option<ColorImage> {
+unsafe fn hicon_to_image(
+    hicon: windows_sys::Win32::UI::WindowsAndMessaging::HICON,
+) -> Option<ColorImage> {
     use windows_sys::Win32::Graphics::Gdi::{
         DeleteObject, GetDC, GetDIBits, GetObjectW, ReleaseDC, BITMAP, BITMAPINFO,
         BITMAPINFOHEADER, BI_RGB, DIB_RGB_COLORS, HBITMAP,
@@ -109,14 +109,16 @@ unsafe fn hicon_to_image(hicon: windows_sys::Win32::UI::WindowsAndMessaging::HIC
         let mut color = color?;
 
         // Icons without an alpha channel come back with alpha = 0 everywhere; use the AND mask.
-        if color.chunks_exact(4).all(|p| p[3] == 0) {
+        let (pixels, _) = color.as_chunks_mut::<4>();
+        if pixels.iter().all(|p| p[3] == 0) {
             let mask = mask?;
-            for (px, m) in color.chunks_exact_mut(4).zip(mask.chunks_exact(4)) {
+            let (mask_px, _) = mask.as_chunks::<4>();
+            for (px, m) in pixels.iter_mut().zip(mask_px) {
                 px[3] = if m[0] == 0 { 255 } else { 0 };
             }
         }
         // BGRA → RGBA
-        for px in color.chunks_exact_mut(4) {
+        for px in pixels.iter_mut() {
             px.swap(0, 2);
         }
         Some(ColorImage::from_rgba_unmultiplied(

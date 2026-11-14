@@ -43,19 +43,22 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
     } else if png.is_file() {
         (png.clone(), image::open(&png)?.to_rgba8())
     } else {
-        return Err(format!(
-            "no source: expected {} or {}",
-            svg.display(),
-            png.display()
-        )
-        .into());
+        return Err(format!("no source: expected {} or {}", svg.display(), png.display()).into());
     };
-    println!("source: {} ({}x{})", src.display(), raw.width(), raw.height());
+    println!(
+        "source: {} ({}x{})",
+        src.display(),
+        raw.width(),
+        raw.height()
+    );
 
     let glyph = to_glyph(&raw);
-    let square = trim_and_square(&glyph, PAD)
-        .ok_or("source image is blank after thresholding")?;
-    println!("glyph bbox squared to {}x{}", square.width(), square.height());
+    let square = trim_and_square(&glyph, PAD).ok_or("source image is blank after thresholding")?;
+    println!(
+        "glyph bbox squared to {}x{}",
+        square.width(),
+        square.height()
+    );
 
     for &n in PNG_SIZES {
         let p = out.join(format!("karasu-{n}.png"));
@@ -131,7 +134,11 @@ fn to_glyph(src: &RgbaImage) -> RgbaImage {
             let lum = (0.2126 * p[0] as f32 + 0.7152 * p[1] as f32 + 0.0722 * p[2] as f32).round();
             255 - lum.clamp(0.0, 255.0) as u8
         };
-        out.put_pixel(x, y, Rgba([GLYPH_RGB[0], GLYPH_RGB[1], GLYPH_RGB[2], alpha]));
+        out.put_pixel(
+            x,
+            y,
+            Rgba([GLYPH_RGB[0], GLYPH_RGB[1], GLYPH_RGB[2], alpha]),
+        );
     }
     out
 }
@@ -154,7 +161,11 @@ fn trim_and_square(img: &RgbaImage, pad: f32) -> Option<RgbaImage> {
     let h = y1 - y0 + 1;
     let glyph_side = w.max(h);
     let side = (glyph_side as f32 * (1.0 + 2.0 * pad)).ceil() as u32;
-    let mut out = RgbaImage::from_pixel(side, side, Rgba([GLYPH_RGB[0], GLYPH_RGB[1], GLYPH_RGB[2], 0]));
+    let mut out = RgbaImage::from_pixel(
+        side,
+        side,
+        Rgba([GLYPH_RGB[0], GLYPH_RGB[1], GLYPH_RGB[2], 0]),
+    );
     let ox = (side - w) / 2;
     let oy = (side - h) / 2;
     for y in 0..h {
