@@ -1,0 +1,35 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/corvus-common",
+    "crates/corvus",
+    "crates/corvus-setup",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+authors = ["Aiden"]
+
+[workspace.dependencies]
+eframe = { version = "0.37", default-features = false, features = ["default_fonts", "glow", "wayland", "x11"] }
+egui = { version = "0.37", features = ["default_fonts"] }
+serde = { version = "1", features = ["derive"] }
+toml = "1"
+log = "0.4"
+windows-sys = { version = "0.61", features = [
+    "Win32_Foundation",
+    "Win32_Storage_FileSystem",
+    "Win32_System_Registry",
+    "Win32_UI_Shell",
+] }
+sha2 = "0.10"
+thiserror = "2"
+
+[profile.release]
+opt-level = "z"
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true
