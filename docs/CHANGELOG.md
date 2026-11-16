@@ -3,6 +3,115 @@
 All dates are the day the work was done. "VERIFY" notes record where the brief was checked against
 real docs/source and what was found.
 
+## 2026-11-15 — Milestone 5: first real run, disk filter changed
+
+- **First real Fresh install (Aiden, 14.6 GB "Generic Flash Disk"):** Ventoy 1.1.18 installed
+  through the CLI without error (GPT, exFAT), the volume was found straight away and renamed from
+  `Ventoy` to `CORVUS`. The run then stopped at the free-space check: 30.2 GB needed, 14.6 GB
+  free. Nothing was copied. **Known gap:** that check runs after the wipe, not before it.
+- **Disk filter is now "attached by USB" only.** Before: USB/SD/MMC bus, or anything with the
+  removable-media flag. Now: USB bus and nothing else, so built-in card slots and hot-swap SATA
+  bays are no longer offered. USB hard drives and SSDs are offered (they were never actually
+  excluded by the old rule, only by the "disk Corvus Setup runs from" protection on this PC).
+- **Warning for formatted USB hard drives / SSDs:** a disk without the removable-media flag that
+  already has partitions (counted with `IOCTL_DISK_GET_DRIVE_LAYOUT_EX`, so partitions without a
+  drive letter count too) shows a warning on the Choose screen and again inside the red erase
+  box on the Confirm screen. Flash sticks and blank disks get no warning.
+- **Tested:** 29 unit tests. **Not tested:** a real USB hard drive / SSD as the target. Ventoy's
+  own USB check is still on and has not been seen accepting a non-removable USB disk yet.
+
+### Later the same day — second real run (476.9 GB "Realtek RTL9210 NVME" USB enclosure)
+
+- **Ventoy's USB check accepts a non-removable USB disk:** `VTOYCLI /I` succeeded in 11 s with
+  the check on. Volume found and renamed to `CORVUS`.
+- **The copy then lost both drives.** 2,090 files (4.8 GB) copied in about 3.5 minutes, then at
+  20:56:17 Windows logged "Delayed Write Failed" on `F:` and an I/O retry on the project disk in
+  the same second. All 3,922 remaining files failed with "path not found" within that second, the
+  config files could not be written, and the run still reported "Finished". Both drives hang off
+  the same Genesys Logic hub, and the target enclosure was on its USB 2.0 side (VID 05E3 PID
+  0610), which matches the ~23 MB/s copy speed. Cause is hardware (hub reset or power), not code.
+- **Fix: a vanished drive stops the run.** After any failed file the sync checks that the target
+  root and the payload folder still exist, and also stops after 25 failures in a row. The run
+  ends as "Stopped" with advice (redo Fresh install; use a USB 3 port on the PC, not a hub)
+  instead of thousands of identical skips and a false "Finished".
+- **Corvus PE is now a PhoenixPE build** (base image Windows 11 IoT Enterprise LTSC), not
+  Win10XPE. Differs from the brief. The PE field now pre-fills from
+  `D:\PhoenixPE-master\<release>\Output\*.iso` (newest wins; the old Win10XPE folder is still
+  searched). The current ISO is an untouched base export: provisional, included for testing.
+- **Tested:** 31 unit tests.
+
+### Third run and follow-up changes
+
+- Target moved to a port on a different root hub (`USB\ROOT_HUB30`, no longer behind the
+  internal Genesys Logic hub the project disk uses). Fresh install copying at about 32 MB/s with
+  no failures at the half-way mark.
+- **Corvus PE is no longer chosen in the window.** The path field is gone. The ISO is a
+  catalogue `[[boot]]` entry: `stage-payload` copies it from the PhoenixPE output folder to
+  `payload/Boot/CorvusPE.iso`, and Corvus Setup installs it with the rest of the payload. The
+  Sources card just shows "Corvus PE: included (size)" or that the payload has none.
+  **Differs from the brief (§8.5),** which asked for a field.
+- `stage-payload`: a boot image is re-copied when the source is newer, not only when its size
+  differs, so a rebuilt ISO of the same size is picked up.
+- **Size check before the erase.** The payload is measured at start-up; a Fresh install onto a
+  disk smaller than payload + 512 MB is blocked on the Choose screen ("This disk is too
+  small…"), and the engine checks again immediately before running Ventoy. The 14.6 GB stick
+  from the first run would now be refused untouched.
+- **Third run finished clean:** 6,012 files / 30.1 GB, 0 skipped, about 16 minutes. Drive verified
+  read-only afterwards (label, `ventoy.json`, `autorun.inf`, ignore markers, no leftover parts).
+- **Drive icon:** `autorun.inf` is written after the copy, and Explorer only reads it when the
+  drive appears, so the crow icon showed after a replug (confirmed by Aiden). Setup now also
+  asks Explorer to refresh the drive straight after writing it (`SHChangeNotify`; best effort,
+  not yet seen working).
+- **Support line:** a small "If Corvus saves you time, please consider supporting its
+  development" line with GitHub Sponsors and Ko-fi links (mortis1369) at the bottom of the
+  Choose screen and on a successful Finished screen. Links open the browser only when clicked.
+- **Launcher support pop-out:** two small overlapping coins beside the Live/WinPE tag in
+  `Corvus.exe`'s title strip. Clicking them opens a small pop-out with the same sentence and the
+  two links (addresses also shown as text, since WinPE may have no browser). Closes on a click
+  elsewhere or Escape. Still no network calls by the launcher itself.
+
+## 2026-11-14 (evening) — Milestone 5, part 1: CorvusSetup.exe (not yet run against a real stick)
+
+- **Relocation fix:** catalogue paths (`sevenzip`, `local`) may now be relative to the workspace
+  root; the five `S:/Corvus/...` entries became `../...`. `make-test-drive.ps1` derives its
+  defaults from its own location. The project no longer cares what drive letter it is mounted on.
+- **Catalogue:** new `skip = "reason"` field (entry is left out and reported as skipped, not
+  FAILED). DDU 18.1.6.2 staged from Aiden's download (it is a 7-Zip SFX, so it is unpacked, not
+  run). HxD skipped (mh-nexus.de down). FreeFileSync skipped: the installer's Portable option is
+  Donation Edition only and the source zip has no Windows build files (Aiden may revisit after
+  checking the Donation Edition's redistribution terms). VeraCrypt 1.26.31 staged after Aiden ran
+  its GUI extractor by hand. **46 launcher entries, 0 failed.**
+- **Ventoy background:** Aiden's 1920x1080 art is now `branding/ventoy-background.png` and is
+  staged as the theme background (not yet seen in a real Ventoy menu).
+- **stage-payload** now also writes `payload/Launcher/boot-menu.toml` (file → Ventoy menu name,
+  for every catalogue boot image whether staged or not) and stages `payload/Branding/` and
+  `payload/ventoy/theme/corvus/`. Background: `branding/ventoy-background.png` if present, else
+  the generated placeholder.
+- **CorvusSetup.exe** (`crates/corvus-setup`, 5 MB): modules `disks`, `ventoy`, `sync`, `config`,
+  `engine`, `app`. Three modes: Fresh install, Update, Payload only (no Ventoy, no admin).
+  - Disk filter: USB/SD/MMC bus or removable only; never a disk holding Windows, a pagefile, or
+    CorvusSetup's own exe/payload/Ventoy folder; fails closed if the Windows disk cannot be
+    identified (except in PE). The disk is re-checked (same number, model, size) right before use.
+  - Fresh install needs `CORVUS` typed exactly. Close is disabled while a job runs.
+  - Self-elevates at start (UAC); declining leaves Payload only available.
+  - Payload sync: new/changed only (size, or mtime differing by > 2 s), never deletes, never
+    touches `Installers\`, writes through `.corvus-part` + rename, failed files logged and skipped,
+    free-space check before the first byte.
+  - Writes `ventoy.json`, `ventoy-log.md` (every setting: what, why, date; run history kept),
+    `autorun.inf`, `.ventoyignore` in Tools/Launcher/Branding, `Launcher\setup-log.txt`.
+  - Ventoy is found in `ventoy\` beside the exe (or `build-tools/downloads/ventoy-*` in dev),
+    copied to `%TEMP%\corvus-setup\ventoy` and run from there.
+- **VERIFY (Ventoy docs re-read 2026-11-14):** `.ventoyignore` confirmed (skips the folder and its
+  subfolders). No menu-ordering key exists; order is by file name. `fonts` in the theme plugin is
+  optional and is not written (no `.pf2` shipped). **Differs from ventoy-notes:**
+  `VTOY_DEFAULT_SEARCH_ROOT` is *not* used, because it allows one root only and `Installers\`
+  must stay bootable; `.ventoyignore` markers do the job instead. No menu timeout is set.
+- **Tested:** 25 unit tests (sync, config, command lines, disk rule, whole job into a temp folder);
+  the real exe run headless (`--headless-folder`) built a complete drive tree twice (second run
+  copied 0 files); on this PC the scan correctly refused all three disks, including the USB disk
+  the project itself lives on. **Not tested:** the Ventoy install/update path and the window's
+  layout by eye.
+
 ## 2026-11-14 — Milestone 4: payload staging
 
 - `build-tools/payload-catalogue.toml` is the single source of truth: 47 tool entries and 8 boot

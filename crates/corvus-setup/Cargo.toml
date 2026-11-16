@@ -4,9 +4,25 @@ version.workspace = true
 edition.workspace = true
 license.workspace = true
 authors.workspace = true
+description = "Corvus Setup - builds and updates a Corvus drive"
+build = "build.rs"
+
+[[bin]]
+name = "CorvusSetup"
+path = "src/main.rs"
 
 [dependencies]
 corvus-common = { path = "../corvus-common" }
 eframe.workspace = true
 egui.workspace = true
 log.workspace = true
+serde.workspace = true
+toml.workspace = true
+windows-sys.workspace = true
+image.workspace = true
+
+[build-dependencies]
+winresource.workspace = true
+
+[dev-dependencies]
+tempfile = "3"

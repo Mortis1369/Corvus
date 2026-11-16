@@ -322,7 +322,13 @@ dependencies = [
  "corvus-common",
  "eframe",
  "egui",
+ "image",
  "log",
+ "serde",
+ "tempfile",
+ "toml",
+ "windows-sys 0.61.2",
+ "winresource",
 ]
 
 [[package]]

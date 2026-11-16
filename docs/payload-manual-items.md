@@ -19,8 +19,16 @@ Also optional, Boot side:
 
 | Image | What to do | Put it at |
 |---|---|---|
-| **Macrium Reflect Rescue** | In Macrium Reflect 8 Free on this PC: *Other Tasks → Create Rescue Media*, choose ISO output. | `S:\Corvus\MacriumRescue.iso` (the catalogue copies it into `Boot\`) |
-| **Corvus PE** | When the Win10XPE build is done. | `S:\Corvus\CorvusPE.iso` (added to the catalogue when it exists) |
+| **Macrium Reflect Rescue** | In Macrium Reflect 8 Free on this PC: *Other Tasks → Create Rescue Media*, choose ISO output. | `<ROOT>\MacriumRescue.iso` (the catalogue copies it into `Boot\`) |
+| **Corvus PE** | When the Win10XPE build is done. | Anywhere: point the Corvus PE field in Corvus Setup at the ISO (it defaults to the newest `.iso` in `D:\Win10XPE-master\Win10XPE\`). |
 
 Until these are in place the staging run reports them as FAILED and carries on; the launcher simply
 shows their tiles greyed out as "missing".
+
+## Status 2026-11-14 (evening)
+
+- **DDU** - done (18.1.6.2, unpacked with 7-Zip from Aiden's download).
+- **VeraCrypt** - done (1.26.31, extracted by Aiden with the GUI extractor, copied into `build-tools\downloads\manual\veracrypt\`).
+- **FreeFileSync** - skipped in the catalogue (*): no free official portable build (Portable is a Donation Edition option; the source zip has no Windows build files). (*) Aiden may return to it after checking the Donation Edition's redistribution terms.
+- **HxD** - skipped in the catalogue until mh-nexus.de is reachable.
+- **Lockpick.wim** - not staged; drop it into `Boot\` on the finished drive. Its menu name is already in ventoy.json.

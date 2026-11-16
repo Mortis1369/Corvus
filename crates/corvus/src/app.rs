@@ -90,6 +90,10 @@ pub struct CorvusApp {
     power_confirm: Option<(PowerAction, Instant)>,
     log_path: Option<PathBuf>,
     placed: bool,
+    /// The little "support Corvus" pop-out under the coins in the title strip.
+    support_open: bool,
+    /// Where the coins were drawn this frame, so the pop-out can hang below them.
+    support_coins: Rect,
 }
 
 // ---- window geometry ------------------------------------------------------------------------
@@ -221,6 +225,8 @@ impl CorvusApp {
             power_confirm: None,
             log_path: s.log_path,
             placed: false,
+            support_open: false,
+            support_coins: Rect::NOTHING,
         }
     }
 
@@ -379,6 +385,12 @@ impl CorvusApp {
                         };
                         ui.label(RichText::new(env).size(12.0).color(TEXT_DIM))
                             .on_hover_text(tip);
+                        ui.add_space(4.0);
+                        let coins = coins_button(ui).on_hover_text("Support Corvus");
+                        if coins.clicked() {
+                            self.support_open = !self.support_open;
+                        }
+                        self.support_coins = coins.rect;
                         ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
                             ui.add_space(6.0);
                             if strip_button(ui, "×", "Close").clicked() {
@@ -690,6 +702,55 @@ impl CorvusApp {
             });
     }
 
+    /// The pop-out under the coins: one sentence and the two support links. Closes on a click
+    /// anywhere else or on Escape. The links open the default browser only when clicked; in
+    /// WinPE there may be no browser, so the addresses are also shown as plain text.
+    fn support_popup(&mut self, ctx: &egui::Context) {
+        if !self.support_open {
+            return;
+        }
+        let area = egui::Area::new(Id::unique("corvus-support"))
+            .order(Order::Foreground)
+            .fixed_pos(self.support_coins.left_bottom() + vec2(-6.0, 6.0))
+            .show(ctx, |ui| {
+                Frame::new()
+                    .fill(SURFACE_ACTIVE)
+                    .stroke(Stroke::new(1.0, BORDER))
+                    .corner_radius(8)
+                    .inner_margin(Margin::symmetric(12, 10))
+                    .show(ui, |ui| {
+                        ui.set_max_width(230.0);
+                        ui.label(
+                            RichText::new(
+                                "If Corvus saves you time, please consider supporting its development.",
+                            )
+                            .size(12.0)
+                            .color(TEXT),
+                        );
+                        ui.add_space(6.0);
+                        for (name, url) in SUPPORT_LINKS {
+                            ui.hyperlink_to(RichText::new(*name).size(12.5), *url);
+                            ui.label(
+                                RichText::new(url.trim_start_matches("https://"))
+                                    .size(10.5)
+                                    .color(TEXT_DIM),
+                            );
+                            ui.add_space(2.0);
+                        }
+                    });
+            });
+        let popup = area.response.rect;
+        let clicked_elsewhere = ctx.input(|i| {
+            i.pointer.any_click()
+                && i.pointer
+                    .interact_pos()
+                    .is_some_and(|p| !popup.contains(p) && !self.support_coins.contains(p))
+        });
+        if clicked_elsewhere || ctx.input(|i| i.key_pressed(egui::Key::Escape)) {
+            self.support_open = false;
+        }
+    }
+
     fn toast_ui(&mut self, ctx: &egui::Context) {
         let Some((msg, t)) = &self.toast else { return };
         if t.elapsed() >= Duration::from_secs(TOAST_SECS) {
@@ -749,6 +810,7 @@ impl eframe::App for CorvusApp {
             theme::paint_inward_glow(&painter, ctx.content_rect());
         }
 
+        self.support_popup(ctx);
         self.toast_ui(ctx);
 
         if self.toast.is_some() || self.power_confirm.is_some() {
@@ -758,6 +820,43 @@ impl eframe::App for CorvusApp {
 }
 
 // ---- widgets --------------------------------------------------------------------------------
+
+const SUPPORT_LINKS: &[(&str, &str)] = &[
+    ("GitHub Sponsors", "https://github.com/sponsors/mortis1369"),
+    ("Ko-fi", "https://ko-fi.com/mortis1369"),
+    ("Corvus on GitHub", "https://github.com/Mortis1369/Corvus"),
+];
+
+/// Two small coins, one partly covering the other. Muted until hovered, so it sits quietly
+/// beside the Live/WinPE tag.
+fn coins_button(ui: &mut Ui) -> Response {
+    let (rect, resp) = ui.allocate_exact_size(vec2(20.0, 16.0), Sense::click());
+    let (back, front, edge) = if resp.hovered() {
+        (
+            Color32::from_rgb(176, 141, 52),
+            Color32::from_rgb(226, 188, 84),
+            Color32::from_rgb(92, 72, 22),
+        )
+    } else {
+        (
+            Color32::from_rgb(104, 90, 52),
+            Color32::from_rgb(138, 120, 70),
+            Color32::from_rgb(58, 50, 28),
+        )
+    };
+    let painter = ui.painter();
+    let c = rect.center();
+    let r = 5.5;
+    // Back coin up and to the right, front coin down and to the left, overlapping it.
+    for (centre, fill) in [
+        (pos2(c.x + 3.0, c.y - 1.5), back),
+        (pos2(c.x - 3.0, c.y + 1.5), front),
+    ] {
+        painter.circle(centre, r, fill, Stroke::new(1.0, edge));
+        painter.circle_stroke(centre, r - 2.2, Stroke::new(0.8, edge));
+    }
+    resp
+}
 
 fn strip_button(ui: &mut Ui, glyph: &str, tip: &str) -> Response {
     let (rect, resp) = ui.allocate_exact_size(vec2(34.0, 26.0), Sense::click());

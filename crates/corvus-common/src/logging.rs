@@ -79,8 +79,8 @@ pub fn init(file: Option<&Path>, level: log::LevelFilter) -> Option<std::io::Err
     open_err
 }
 
-/// Local-looking UTC timestamp without pulling in a date crate.
-fn timestamp() -> String {
+/// `YYYY-MM-DD HH:MM:SS` in UTC, without pulling in a date crate.
+pub fn timestamp() -> String {
     let secs = SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .map(|d| d.as_secs())

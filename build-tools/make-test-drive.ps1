@@ -1,6 +1,6 @@
 # Builds a throwaway "drive" folder for exercising Corvus.exe without a USB stick.
 #
-#   S:\Corvus\test-drive\
+#   <ROOT>\test-drive\        (<ROOT> = the folder that holds corvus\, PortableApps\, Crowbar.exe)
 #     Launcher\Corvus.exe + tools.toml
 #     Tools\<Category>\<Tool>\...   (a handful of real exes copied from the MediCat PortableApps folder)
 #
@@ -8,11 +8,12 @@
 # sha256 ("changed"), a PE-only tool, a live-only tool, and three malformed entries that must be
 # skipped without taking the launcher down.
 #
-# Usage:  pwsh build-tools\make-test-drive.ps1 [-Src S:\Corvus\PortableApps] [-Dst S:\Corvus\test-drive]
+# Usage:  pwsh build-tools\make-test-drive.ps1 [-Src <ROOT>\PortableApps] [-Dst <ROOT>\test-drive]
 
 param(
-    [string]$Src = "S:\Corvus\PortableApps",
-    [string]$Dst = "S:\Corvus\test-drive",
+    [string]$Root = (Resolve-Path (Join-Path $PSScriptRoot "..\..")).Path,
+    [string]$Src = (Join-Path $Root "PortableApps"),
+    [string]$Dst = (Join-Path $Root "test-drive"),
     [string]$Exe = (Join-Path $PSScriptRoot "..\target\release\Corvus.exe")
 )
 $ErrorActionPreference = "Stop"
@@ -43,7 +44,7 @@ CopyTool "$Src\ProcessExplorerPortable\App\ProcessExplorer"  "Tools\System\Sysin
 CopyTool "$Src\DDU v18.0.3.3"                                "Tools\System\DDU"
 CopyTool "$Src\7-ZipPortable\App\7-Zip64"                    "Tools\Disk\7-Zip"
 CopyTool "$Src\RegistryLoaderPE"                             "Tools\System\RegistryLoaderPE"
-CopyTool "S:\Corvus\Crowbar.exe"                             "Tools\Deployment\Crowbar\Crowbar.exe"
+CopyTool (Join-Path $Root "Crowbar.exe")                        "Tools\Deployment\Crowbar\Crowbar.exe"
 
 $hwinfoHash = (Get-FileHash "$Dst\Tools\Diagnostics\HWiNFO\HWiNFO64.exe" -Algorithm SHA256).Hash.ToLower()
 

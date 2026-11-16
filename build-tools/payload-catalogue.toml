@@ -8,7 +8,7 @@
 downloads = "build-tools/downloads"
 payload   = "payload"
 # Bootstrap extractor (the old MediCat copy; only used at build time, never shipped).
-sevenzip  = "S:/Corvus/PortableApps/7-ZipPortable/App/7-Zip64/7z.exe"
+sevenzip  = "../PortableApps/7-ZipPortable/App/7-Zip64/7z.exe"
 
 # =================================================================== Diagnostics
 
@@ -242,14 +242,14 @@ delete = ["win-arm64"]
 id = "ddu"
 name = "Display Driver Uninstaller"
 category = "System"
-version = "18.1.6.1"
+version = "18.1.6.2"
 license = "Freeware"
 source = "https://www.wagnardsoft.com/display-driver-uninstaller-ddu"
 kind = "manual"
 exe = "Display Driver Uninstaller.exe"
 mode = "live"
 elevate = true
-notes = "Wagnardsoft's download sits behind a Cloudflare check: download 'DDU v18.1.6.1.exe' in a browser, run it once (it is a self-extractor), and put the extracted folder's contents in build-tools/downloads/manual/ddu/."
+notes = "Wagnardsoft's download sits behind a Cloudflare check: download 'DDU v18.1.6.2.exe' in a browser. It is a 7-Zip self-extractor: unpack it (7z x) into build-tools/downloads/manual/ddu/."
 
 [[tool]]
 id = "wiztree"
@@ -344,7 +344,7 @@ exe = "SDIO_x64_R890.exe"
 mode = "live"
 elevate = true
 notes = "Driver packs are the 2026 set carried over from the MediCat drive (the 2021 duplicates were dropped)."
-extra = [ { local = "S:/Corvus/PortableApps/SnappyDriverInstaller/drivers", to = "drivers" } ]
+extra = [ { local = "../PortableApps/SnappyDriverInstaller/drivers", to = "drivers" } ]
 delete = [
   "drivers/DP_CardReader_21113.7z", "drivers/DP_Chipset_21113.7z", "drivers/DP_LAN_Intel_21104.7z",
   "drivers/DP_LAN_Others_21113.7z", "drivers/DP_LAN_Realtek-NT_21104.7z", "drivers/DP_MassStorage_21113.7z",
@@ -398,7 +398,8 @@ license = "GPL-3.0"
 source = "https://freefilesync.org/download.php"
 kind = "manual"
 exe = "FreeFileSync.exe"
-notes = "Run FreeFileSync_14.13_Windows_Setup.exe once, choose the *Portable* installation type, target build-tools/downloads/manual/freefilesync/. Never the Local install (that is the path with bundled offers)."
+skip = "No official free portable build: the installer's Portable option is Donation Edition only, and the source zip has no Windows build files (Linux/macOS Makefiles only). Left out for now (*). (*) Aiden may return to this: he is open to paying, but first needs to check whether a Donation Edition portable copy may be carried on a drive used on client machines."
+notes = "If a Donation Edition portable folder is ever supplied: put it in build-tools/downloads/manual/freefilesync/ and delete the skip line. Never the Local install (bundled offers)."
 
 [[tool]]
 id = "veracrypt"
@@ -448,7 +449,7 @@ version = "0.1.0"
 license = "MIT"
 source = "Aiden"
 kind = "local"
-local = "S:/Corvus/Crowbar.exe"
+local = "../Crowbar.exe"
 exe = "Crowbar.exe"
 mode = "live"
 notes = "Aiden's provisioning tool (WinUtil replacement)."
@@ -542,6 +543,7 @@ category = "Utilities"
 license = "Freeware"
 source = "https://mh-nexus.de/en/hxd/"
 kind = "manual"
+skip = "mh-nexus.de was down on 2026-11-14; add when the site is back."
 exe = "HxD.exe"
 notes = "mh-nexus.de refuses scripted downloads. Download 'HxD Portable' from the site, extract, and put the files in build-tools/downloads/manual/hxd/."
 
@@ -574,11 +576,22 @@ version = "5.2"
 license = "Freeware"
 source = "https://www.roadkil.net/program.php?ProgramID=29"
 kind = "local"
-local = "S:/Corvus/PortableApps/Unstoppablecopier/UnstopCpy_5_2_Win2K_UP.exe"
+local = "../PortableApps/Unstoppablecopier/UnstopCpy_5_2_Win2K_UP.exe"
 exe = "UnstopCpy_5_2_Win2K_UP.exe"
 notes = "Same 5.2 build the vendor ships; roadkil.net only offers an installer, so the bare exe from the old drive is reused."
 
 # =================================================================== Boot images (Ventoy menu)
+
+# Corvus PE: Aiden's own PhoenixPE build (base image Windows 11 IoT Enterprise LTSC).
+# PROVISIONAL as of 2026-11-15: an untouched base export, staged so the drive has a PE to test
+# with. When the ISO is rebuilt, re-run `stage-payload --boot-only`; a newer file is re-copied.
+# The name must stay CorvusPE.iso: Corvus Setup pre-selects Boot/CorvusPE.iso in the Ventoy menu.
+[[boot]]
+name = "CorvusPE.iso"
+local = "D:/PhoenixPE-master/PhoenixPE-2026.10.25-x64/Output/CorvusPE.iso"
+version = "provisional (PhoenixPE 2026.10.25 base export)"
+source = "Built by Aiden with PhoenixPE from Windows 11 IoT Enterprise LTSC"
+menu = "Corvus PE"
 
 [[boot]]
 name = "Lockpick.wim"
@@ -634,7 +647,7 @@ menu = "ShredOS (disk wipe)"
 
 [[boot]]
 name = "MacriumRescue.iso"
-local = "S:/Corvus/MacriumRescue.iso"
+local = "../MacriumRescue.iso"
 version = "Reflect 8 Free 8.0.7783"
 source = "Built with Macrium Reflect's Rescue Media Builder on Aiden's PC"
 menu = "Macrium Reflect Rescue"

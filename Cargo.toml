@@ -27,6 +27,8 @@ windows-sys = { version = "0.61", features = [
     "Win32_UI_Shell",
     "Win32_UI_WindowsAndMessaging",
     "Win32_Graphics_Gdi",
+    "Win32_Security",
+    "Win32_System_IO",
 ] }
 sha2 = "0.10"
 thiserror = "2"
